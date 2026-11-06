@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>企业收款认领平台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --ok: #059669;
+    --warn: #d97706;
+    --danger: #dc2626;
+    --line: #e5e7eb;
+    --muted: #6b7280;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f4f6fb;
+    color: #1f2937;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------- 顶栏 ---------- */
+  .topbar {
+    background: linear-gradient(120deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff;
+    padding: 18px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+    box-shadow: 0 4px 20px rgba(37, 99, 235, .25);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 13px;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.35);
+    display: grid; place-items: center;
+    font-size: 22px; font-weight: 700;
+  }
+  .brand h1 { font-size: 19px; letter-spacing: .5px; }
+  .brand p { font-size: 12px; opacity: .8; }
+  .tabs { display: flex; gap: 8px; background: rgba(255,255,255,.14); padding: 5px; border-radius: 12px; }
+  .tab {
+    border: none; background: transparent; color: #fff; cursor: pointer;
+    padding: 8px 22px; border-radius: 9px; font-size: 14px; font-weight: 500;
+    transition: .2s; font-family: inherit;
+  }
+  .tab:hover { background: rgba(255,255,255,.14); }
+  .tab.active { background: #fff; color: var(--primary); font-weight: 600; }
+
+  /* ---------- 布局 ---------- */
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 60px; }
+  .view { display: none; animation: fade .25s ease; }
+  .view.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .card {
+    background: #fff; border-radius: 16px; padding: 22px 24px;
+    box-shadow: 0 2px 14px rgba(17, 24, 39, .06);
+    border: 1px solid #eef1f6;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .card h2::before {
+    content: ''; width: 4px; height: 16px; border-radius: 3px;
+    background: linear-gradient(180deg, #3b82f6, #2563eb);
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+
+  /* ---------- 表单 ---------- */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field span { font-size: 13px; color: #374151; font-weight: 500; }
+  .field span i { color: var(--danger); font-style: normal; }
+  input[type=text], input[type=password], input[type=search], input[type=number], select, textarea {
+    width: 100%; padding: 10px 13px; border: 1px solid var(--line);
+    border-radius: 10px; font-size: 14px; font-family: inherit;
+    background: #fbfcfe; transition: .18s; color: #111827; outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--primary); background: #fff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+  }
+  .verified {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #ecfdf5; color: var(--ok); border: 1px solid #a7f3d0;
+    padding: 4px 12px; border-radius: 999px; font-size: 12px; margin-top: 12px;
+  }
+
+  /* ---------- 按钮 ---------- */
+  .btn {
+    border: 1px solid var(--line); background: #fff; color: #374151;
+    padding: 9px 18px; border-radius: 10px; cursor: pointer;
+    font-size: 14px; font-family: inherit; font-weight: 500; transition: .18s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: #f3f4f6; border-color: #d1d5db; }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn.primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+  .btn.primary:disabled { background: #93b4f7; border-color: #93b4f7; cursor: not-allowed; }
+  .btn.danger { background: #fff; border-color: #fecaca; color: var(--danger); }
+  .btn.danger:hover { background: #fef2f2; border-color: #fca5a5; }
+  .btn.tiny { padding: 5px 12px; font-size: 12.5px; border-radius: 8px; }
+
+  /* ---------- 表格 ---------- */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    background: #f8fafc; text-align: left; padding: 12px 14px;
+    font-weight: 600; color: #475569; font-size: 12.5px;
+    white-space: nowrap; border-bottom: 1px solid var(--line);
+  }
+  tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: #fafbfe; }
+  tbody tr.row-disabled { background: #f9fafb; color: #9ca3af; }
+  tbody tr.row-disabled:hover { background: #f9fafb; }
+  td.amount { font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
+  tbody tr.row-disabled td.amount { color: #9ca3af; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; color: #475569; }
+  .muted { color: var(--muted); }
+  .col-check { width: 44px; text-align: center; }
+  .col-ops { white-space: nowrap; }
+  .col-ops .btn + .btn { margin-left: 6px; }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+  input[type=checkbox]:disabled { cursor: not-allowed; }
+  .empty { text-align: center; color: var(--muted); padding: 38px 0 !important; font-size: 13px; }
+
+  /* ---------- 徽章 ---------- */
+  .badge {
+    display: inline-block; padding: 3px 11px; border-radius: 999px;
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .badge.unclaimed { background: #fef3c7; color: #b45309; }
+  .badge.claimed { background: #d1fae5; color: #047857; }
+
+  /* ---------- 打款账户彩色标签 ---------- */
+  .bank {
+    display: inline-block; font-weight: 700; font-size: 13px;
+    padding: 3px 11px; border-radius: 8px; border: 1px solid;
+    white-space: nowrap; letter-spacing: .3px;
+  }
+
+  /* ---------- 过滤条 / 操作条 ---------- */
+  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .filters input[type=search] { width: 200px; }
+  .filters select { width: 132px; }
+  .switch { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: #475569; cursor: pointer; user-select: none; }
+
+  .action-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-top: 16px;
+    padding-top: 16px; border-top: 1px dashed var(--line);
+  }
+  .action-bar b { color: var(--primary); }
+
+  /* ---------- 统计 ---------- */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat {
+    background: #fff; border: 1px solid #eef1f6; border-radius: 14px;
+    padding: 16px 18px; box-shadow: 0 2px 10px rgba(17,24,39,.04);
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .stat span { font-size: 12.5px; color: var(--muted); }
+  .stat b { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat b.ok { color: var(--ok); }
+  .stat b.warn { color: var(--warn); }
+
+  /* ---------- 日志 ---------- */
+  .log-list { list-style: none; margin-top: 14px; max-height: 340px; overflow-y: auto; }
+  .log-item {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 12px; border-radius: 10px; font-size: 13px;
+    border-bottom: 1px dashed #eef1f6;
+  }
+  .log-time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .log-tag { padding: 1px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
+  .log-item.claim  .log-tag { background: #dbeafe; color: #1d4ed8; }
+  .log-item.revoke .log-tag { background: #fee2e2; color: #b91c1c; }
+  .log-item.add    .log-tag { background: #e0f2fe; color: #0369a1; }
+  .log-item.edit   .log-tag { background: #fef9c3; color: #a16207; }
+  .log-item.del    .log-tag { background: #fee2e2; color: #b91c1c; }
+  .log-text { flex: 1; color: #374151; min-width: 200px; }
+
+  /* ---------- 登录 ---------- */
+  .login-card { max-width: 400px; margin: 60px auto; text-align: center; }
+  .login-card h2 { justify-content: center; }
+  .login-card h2::before { display: none; }
+  .login-card input { margin: 20px 0 14px; text-align: center; }
+  .login-card .btn { width: 100%; }
+
+  /* ---------- 弹窗 ---------- */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, .5);
+    backdrop-filter: blur(3px); display: grid; place-items: center;
+    z-index: 100; padding: 20px; animation: fade .18s ease;
+  }
+  .modal {
+    background: #fff; border-radius: 18px; padding: 24px;
+    width: min(520px, 100%); max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,.28);
+    animation: pop .22s cubic-bezier(.2,.9,.3,1.3);
+  }
+  @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal h3 { font-size: 17px; margin-bottom: 14px; }
+  .modal-body { font-size: 14px; color: #374151; }
+  .modal-body p { margin-bottom: 8px; }
+  .modal-note { margin-top: 12px; resize: vertical; min-height: 66px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+  .mini-list {
+    list-style: none; background: #f8fafc; border-radius: 10px;
+    padding: 10px 14px; margin: 10px 0; max-height: 168px; overflow-y: auto;
+    font-size: 13px; color: #334155;
+  }
+  .mini-list li { padding: 3px 0; }
+  .confirm-box b { color: #0f172a; }
+  .confirm-box b.amount { color: var(--primary); }
+
+  /* ---------- Toast ---------- */
+  #toastWrap {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 200; display: flex; flex-direction: column; gap: 10px; align-items: center;
+  }
+  .toast {
+    padding: 11px 22px; border-radius: 11px; font-size: 13.5px; color: #fff;
+    box-shadow: 0 8px 26px rgba(0,0,0,.18); animation: slideIn .25s ease;
+    max-width: 90vw;
+  }
+  .toast.info    { background: #334155; }
+  .toast.success { background: #059669; }
+  .toast.error   { background: #dc2626; }
+  .toast.warn    { background: #d97706; }
+  .toast.out     { opacity: 0; transform: translateY(-10px); transition: .3s; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 14px 16px; }
+    .brand h1 { font-size: 16px; }
+    .wrap { padding: 16px 12px 40px; }
+    .card { padding: 16px; border-radius: 14px; }
+    .filters input[type=search] { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">￥</div>
+    <div>
+      <h1>企业收款认领平台</h1>
+      <p>收款记录认领 · 原子性校验 · 管理员核验与撤销</p>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-view="employee">员工端</button>
+    <button class="tab" data-view="admin">管理端</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ==================== 员工端 ==================== -->
+  <section id="view-employee" class="view active">
+
+    <!-- 身份核验 -->
+    <div class="card">
+      <h2>① 身份核验</h2>
+      <div class="form-grid">
+        <label class="field"><span>姓名 <i>*</i></span>
+          <input type="text" id="empName" placeholder="请输入本人真实姓名" autocomplete="off">
+        </label>
+        <label class="field"><span>工号 <i>*</i></span>
+          <input type="text" id="empNo" placeholder="请输入员工工号" autocomplete="off">
+        </label>
+        <label class="field"><span>手机号（选填）</span>
+          <input type="text" id="empPhone" placeholder="用于身份核对" autocomplete="off">
+        </label>
+      </div>
+      <div id="identityStatus"></div>
+      <p class="hint">认领时会将以上身份信息与所选收款记录绑定，请确保填写准确无误。</p>
+    </div>
+
+    <!-- 待认领记录 -->
+    <div class="card">
+      <div class="card-head">
+        <h2>② 待认领收款记录</h2>
+        <div class="filters">
+          <input type="search" id="searchEmp" placeholder="搜索公司 / 记录编号 / 打款账户">
+          <label class="switch"><input type="checkbox" id="hideClaimed"> 隐藏已认领</label>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-check"><input type="checkbox" id="checkAll" title="全选"></th>
+              <th>记录编号</th>
+              <th>收款金额</th>
+              <th>对应公司名称</th>
+              <th>打款账户名称</th>
+              <th>认领状态</th>
+            </tr>
+          </thead>
+          <tbody id="empTbody"></tbody>
+        </table>
+      </div>
+
+      <div class="action-bar">
+        <div>已选择 <b id="selCount">0</b> 条记录，合计金额 <b id="selAmount">¥0.00</b></div>
+        <button class="btn primary" id="btnClaim">确认认领</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 管理端 ==================== -->
+  <section id="view-admin" class="view">
+
+    <!-- 登录 -->
+    <div id="adminLogin" class="card login-card">
+      <h2>管理员登录</h2>
+      <input type="password" id="adminPwd" placeholder="请输入管理员密码">
+      <button class="btn primary" id="btnLogin">登 录</button>
+      <p class="hint">演示密码：admin123</p>
+    </div>
+
+    <!-- 面板 -->
+    <div id="adminPanel" class="hidden">
+      <div class="stats" id="stats"></div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>收款记录管理与认领结果</h2>
+          <div class="filters">
+            <input type="search" id="adminSearch" placeholder="搜索公司 / 认领人 / 工号">
+            <select id="adminFilter">
+              <option value="all">全部状态</option>
+              <option value="unclaimed">未认领</option>
+              <option value="claimed">已认领</option>
+            </select>
+            <button class="btn primary" id="btnAdd">+ 新增记录</button>
+            <button class="btn" id="btnExport">导出 Excel</button>
+            <button class="btn" id="btnLogout">退出</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>记录编号</th>
+                <th>收款金额</th>
+                <th>对应公司名称</th>
+                <th>打款账户名称</th>
+                <th>认领状态</th>
+                <th>认领人</th>
+                <th>工号</th>
+                <th>认领时间</th>
+                <th class="col-ops">操作</th>
+              </tr>
+            </thead>
+            <tbody id="adminTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>操作日志</h2>
+        <ul class="log-list" id="logList"></ul>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- 弹窗 -->
+<div class="modal-mask hidden" id="modalMask">
+  <div class="modal">
+    <h3 id="modalTitle">确认</h3>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">取消</button>
+      <button class="btn primary" id="modalOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toastWrap"></div>
+
+<script>
+/* =========================================================
+ *  1. 常量 / 工具
+ * ========================================================= */
+const STORAGE_KEY  = 'claim_system_v2';
+const EMP_KEY      = 'claim_employee_v2';
+const LOCK_KEY     = 'claim_lock_v2';
+const LOCK_TTL     = 3000;                 // 锁超时（毫秒）
+const ADMIN_PASSWORD = 'admin123';
+const LOG_LIMIT    = 200;
+
+/* 四个打款账户 + 配色（加粗、区分色号） */
+const BANKS = {
+  '农业银行': { fg: '#047857', bg: '#ecfdf5', bd: '#a7f3d0' },
+  '建设银行': { fg: '#1d4ed8', bg: '#eff6ff', bd: '#bfdbfe' },
+  '工商银行': { fg: '#b91c1c', bg: '#fef2f2', bd: '#fecaca' },
+  '交通银行': { fg: '#6d28d9', bg: '#f5f3ff', bd: '#ddd6fe' }
+};
+const BANK_NAMES = Object.keys(BANKS);
+
+const fmtMoney = n => '¥' + Number(n || 0).toLocaleString('zh-CN', {
+  minimumFractionDigits: 2, maximumFractionDigits: 2
+});
+const fmtTime = iso => iso
+  ? new Date(iso).toLocaleString('zh-CN', { hour12: false })
+  : '—';
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = p => p + Date.now().toString(36).toUpperCase() +
+  Math.random().toString(36).slice(2, 6).toUpperCase();
+
+function bankTag(bank) {
+  const c = BANKS[bank] || { fg: '#475569', bg: '#f1f5f9', bd: '#e2e8f0' };
+  return `<span class="bank" style="color:${c.fg};background:${c.bg};border-color:${c.bd}">${esc(bank)}</span>`;
+}
+
+/* =========================================================
+ *  2. 数据层（模拟服务端存储）
+ * ========================================================= */
+function seedData() {
+  const raw = [
+    ['RC20260601001', 12800.00, '杭州云启科技有限公司',       '农业银行'],
+    ['RC20260601002',  5600.00, '上海鼎信贸易有限公司',       '建设银行'],
+    ['RC20260601003', 23800.00, '深圳市恒泰电子有限公司',     '工商银行'],
+    ['RC20260601004',  3200.00, '北京星辰文化传媒有限公司',   '交通银行'],
+    ['RC20260601005',  9800.50, '广州瑞丰供应链管理有限公司', '农业银行'],
+    ['RC20260601006', 15600.00, '成都天工机械制造有限公司',   '建设银行'],
+    ['RC20260601007',  7600.00, '南京博远信息技术有限公司',   '工商银行'],
+    ['RC20260601008', 42000.00, '苏州精诚新材料有限公司',     '交通银行'],
+    ['RC20260601009',  2100.00, '武汉智联网络科技有限公司',   '农业银行'],
+    ['RC20260601010', 18500.00, '西安华信建设集团有限公司',   '建设银行'],
+  ];
+  return {
+    records: raw.map(([id, amount, company, bank]) => ({
+      id, amount, company, bank,
+      status: 'unclaimed',
+      claimedBy: null,
+      claimTime: null,
+      claimNo: null,
+      revokeCount: 0
+    })),
+    logs: []
+  };
+}
+
+function loadState() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    const s = seedData();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    return s;
+  }
+  try { return JSON.parse(raw); }
+  catch (e) { return seedData(); }
+}
+
+function saveState(state) {
+  if (state.logs && state.logs.length > LOG_LIMIT) state.logs.length = LOG_LIMIT;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+/* ---------- 互斥锁：保证「校验 + 写入」不被并发打断 ---------- */
+function acquireLock() {
+  const now = Date.now();
+  let lock = null;
+  try { lock = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); } catch (e) {}
+  if (lock && now - lock.t < LOCK_TTL) {
+    return { ok: false, msg: '系统正在处理其他请求，请稍后重试' };
+  }
+  localStorage.setItem(LOCK_KEY, JSON.stringify({
+    t: now, token: Math.random().toString(36).slice(2)
+  }));
+  return { ok: true };
+}
+function releaseLock() { localStorage.removeItem(LOCK_KEY); }
+
+/* =========================================================
+ *  3. 核心业务：原子性认领 / 撤销 / 记录增删改
+ * ========================================================= */
+
+/**
+ * 批量认领（原子性校验）
+ * 规则：逐条重新校验记录状态必须为「未认领」，校验通过才写入；
+ *      任意一条失败不影响其他条，整体结果逐条返回。
+ */
+function performClaim(ids, employee) {
+  const lock = acquireLock();
+  if (!lock.ok) return lock;
+
+  try {
+    const state = loadState();        // 锁内重新读取，拿到最新数据
+    const now = new Date();
+    const results = [];
+
+    ids.forEach(id => {
+      const rec = state.records.find(r => r.id === id);
+
+      if (!rec) {
+        results.push({ id, ok: false, msg: '记录不存在' });
+        return;
+      }
+      // ★ 原子性校验：状态必须为「未认领」
+      if (rec.status !== 'unclaimed') {
+        results.push({ id, ok: false, msg: '该记录已被认领', company: rec.company });
+        return;
+      }
+
+      // 校验通过 → 置为已认领，绑定认领人与时间
+      rec.status    = 'claimed';
+      rec.claimedBy = {
+        name:  employee.name,
+        empNo: employee.empNo,
+        phone: employee.phone || ''
+      };
+      rec.claimTime = now.toISOString();
+      rec.claimNo   = uid('CL');
+
+      state.logs.unshift({
+        id: uid('LOG'), type: 'claim',
+        recordId: id, company: rec.company, amount: rec.amount, bank: rec.bank,
+        operator: employee.name, empNo: employee.empNo,
+        time: now.toISOString()
+      });
+
+      results.push({ id, ok: true, company: rec.company, amount: rec.amount });
+    });
+
+    saveState(state);
+    return { ok: true, results };
+  } finally {
+    releaseLock();
+  }
+}
+
+/** 异常撤销：已认领 → 未认领 */
+function revokeClaim(id, reason) {
+  const lock = acquireLock();
+  if (!lock.ok) return lock;
+
+  try {
+    const state = loadState();
+    const rec = state.records.find(r => r.id === id);
+
+    if (!rec) return { ok: false, msg: '记录不存在' };
+    if (rec.status !== 'claimed') {
+      return { ok: false, msg: '该记录当前不是「已认领」状态，无法撤销' };
+    }
+
+    const prev = { ...rec.claimedBy };
+
+    rec.status    = 'unclaimed';
+    rec.claimedBy = null;
+    rec.claimTime = null;
+    rec.claimNo   = null;
+    rec.revokeCount = (rec.revokeCount || 0) + 1;
+
+    state.logs.unshift({
+      id: uid('LOG'), type: 'revoke',
+      recordId: id, company: rec.company, amount: rec.amount, bank: rec.bank,
+      operator: '管理员', target: prev, note: reason,
+      time: new Date().toISOString()
+    });
+
+    saveState(state);
+    return { ok: true };
+  } finally {
+    releaseLock();
+  }
+}
+
+/** 新增收款记录 */
+function addRecord(data) {
+  const lock = acquireLock();
+  if (!lock.ok) return lock;
+
+  try {
+    const state = loadState();
+    if (state.records.some(r => r.id === data.id)) {
+      return { ok: false, msg: '记录编号「' + data.id + '」已存在' };
+    }
+    state.records.unshift({
+      id: data.id,
+      amount: data.amount,
+      company: data.company,
+      bank: data.bank,
+      status: 'unclaimed',
+      claimedBy: null,
+      claimTime: null,
+      claimNo: null,
+      revokeCount: 0
+    });
+
+    state.logs.unshift({
+      id: uid('LOG'), type: 'add',
+      recordId: data.id, company: data.company, amount: data.amount, bank: data.bank,
+      operator: '管理员', time: new Date().toISOString()
+    });
+
+    saveState(state);
+    return { ok: true };
+  } finally {
+    releaseLock();
+  }
+}
+
+/** 修改收款记录（已认领记录修改时保留认领信息） */
+function updateRecord(oldId, data) {
+  const lock = acquireLock();
+  if (!lock.ok) return lock;
+
+  try {
+    const state = loadState();
+    const rec = state.records.find(r => r.id === oldId);
+    if (!rec) return { ok: false, msg: '记录不存在' };
+
+    if (data.id !== oldId && state.records.some(r => r.id === data.id)) {
+      return { ok: false, msg: '记录编号「' + data.id + '」已被其他记录占用' };
+    }
+
+    rec.id      = data.id;
+    rec.amount  = data.amount;
+    rec.company = data.company;
+    rec.bank    = data.bank;
+
+    state.logs.unshift({
+      id: uid('LOG'), type: 'edit',
+      recordId: data.id, company: data.company, amount: data.amount, bank: data.bank,
+      operator: '管理员', time: new Date().toISOString()
+    });
+
+    saveState(state);
+    return { ok: true };
+  } finally {
+    releaseLock();
+  }
+}
+
+/** 删除收款记录 */
+function deleteRecord(id) {
+  const lock = acquireLock();
+  if (!lock.ok) return lock;
+
+  try {
+    const state = loadState();
+    const idx = state.records.findIndex(r => r.id === id);
+    if (idx === -1) return { ok: false, msg: '记录不存在' };
+
+    const rec = state.records[idx];
+    state.records.splice(idx, 1);
+
+    state.logs.unshift({
+      id: uid('LOG'), type: 'del',
+      recordId: rec.id, company: rec.company, amount: rec.amount, bank: rec.bank,
+      operator: '管理员', time: new Date().toISOString()
+    });
+
+    saveState(state);
+    return { ok: true, wasClaimed: rec.status === 'claimed' };
+  } finally {
+    releaseLock();
+  }
+}
+
+/* =========================================================
+ *  4. 员工身份
+ * ========================================================= */
+function loadEmployee() {
+  try {
+    return JSON.parse(localStorage.getItem(EMP_KEY) || 'null')
+      || { name: '', empNo: '', phone: '' };
+  } catch (e) { return { name: '', empNo: '', phone: '' }; }
+}
+function saveEmployee(e) { localStorage.setItem(EMP_KEY, JSON.stringify(e)); }
+
+/* =========================================================
+ *  5. Toast / Modal
+ * ========================================================= */
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 320);
+  }, 3000);
+}
+
+/**
+ * 通用弹窗
+ * @param {string}  title
+ * @param {string}  html
+ * @param {object}  opt  { okText, requireNote, notePlaceholder }
+ * @returns {Promise<{ok:boolean, note:string, values:object}>}
+ */
+function showModal(title, html, opt = {}) {
+  return new Promise(resolve => {
+    const mask    = document.getElementById('modalMask');
+    const body    = document.getElementById('modalBody');
+    const okBtn   = document.getElementById('modalOk');
+    const cancel  = document.getElementById('modalCancel');
+
+    document.getElementById('modalTitle').textContent = title;
+    body.innerHTML = html + (opt.requireNote
+      ? `<textarea id="modalNote" class="modal-note" placeholder="${esc(opt.notePlaceholder || '')}"></textarea>`
+      : '');
+    okBtn.textContent = opt.okText || '确定';
+    mask.classList.remove('hidden');
+
+    const finish = ok => {
+      const noteEl = document.getElementById('modalNote');
+      const values = {};
+      body.querySelectorAll('[name]').forEach(el => { values[el.name] = el.value; });
+      mask.classList.add('hidden');
+      okBtn.onclick = null;
+      cancel.onclick = null;
+      mask.onclick = null;
+      resolve({ ok, note: noteEl ? noteEl.value.trim() : '', values });
+    };
+
+    okBtn.onclick = () => finish(true);
+    cancel.onclick = () => finish(false);
+    mask.onclick = e => { if (e.target === mask) finish(false); };
+  });
+}
+
+/* =========================================================
+ *  6. 状态
+ * ========================================================= */
+const selected = new Set();                         // 员工端已勾选的记录 ID
+let adminAuthed = sessionStorage.getItem('claim_admin_auth') === '1';
+
+/* =========================================================
+ *  7. 员工端渲染
+ * ========================================================= */
+function renderIdentityStatus() {
+  const emp = loadEmployee();
+  const box = document.getElementById('identityStatus');
+  if (emp.name && emp.empNo) {
+    box.innerHTML = `<div class="verified">✓ 身份已核验：${esc(emp.name)}（工号 ${esc(emp.empNo)}）</div>`;
+  } else {
+    box.innerHTML = '';
+  }
+}
+
+function updateSelSummary() {
+  const state = loadState();
+  const picked = state.records.filter(r => selected.has(r.id) && r.status === 'unclaimed');
+  const total = picked.reduce((s, r) => s + r.amount, 0);
+  document.getElementById('selCount').textContent = picked.length;
+  document.getElementById('selAmount').textContent = fmtMoney(total);
+}
+
+function renderEmployeeTable() {
+  const state = loadState();
+  const q = (document.getElementById('searchEmp').value || '').trim().toLowerCase();
+  const hideClaimed = document.getElementById('hideClaimed').checked;
+  const tbody = document.getElementById('empTbody');
+
+  // 清理已失效的选择（已被认领 / 已被删除）
+  const validIds = new Set(
+    state.records.filter(r => r.status === 'unclaimed').map(r => r.id)
+  );
+  [...selected].forEach(id => { if (!validIds.has(id)) selected.delete(id); });
+
+  const list = state.records.filter(r => {
+    if (hideClaimed && r.status === 'claimed') return false;
+    if (q) {
+      const hay = `${r.company} ${r.id} ${r.amount} ${r.bank}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">暂无可显示的收款记录</td></tr>`;
+  } else {
+    tbody.innerHTML = list.map(r => {
+      const claimed = r.status === 'claimed';
+      return `
+        <tr class="${claimed ? 'row-disabled' : ''}">
+          <td class="col-check">
+            <input type="checkbox" data-id="${esc(r.id)}"
+                   ${claimed ? 'disabled' : ''} ${selected.has(r.id) ? 'checked' : ''}>
+          </td>
+          <td class="mono">${esc(r.id)}</td>
+          <td class="amount">${fmtMoney(r.amount)}</td>
+          <td>${esc(r.company)}</td>
+          <td>${bankTag(r.bank)}</td>
+          <td>${claimed
+                ? '<span class="badge claimed">已认领</span>'
+                : '<span class="badge unclaimed">未认领</span>'}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  // 全选框状态
+  const boxes = [...tbody.querySelectorAll('input[type=checkbox][data-id]:not(:disabled)')];
+  const checkAll = document.getElementById('checkAll');
+  checkAll.checked = boxes.length > 0 && boxes.every(b => b.checked);
+  checkAll.disabled = boxes.length === 0;
+
+  updateSelSummary();
+}
+
+/* ---------- 员工端事件 ---------- */
+document.getElementById('empTbody').addEventListener('change', e => {
+  const cb = e.target.closest('input[type=checkbox][data-id]');
+  if (!cb) return;
+  if (cb.checked) selected.add(cb.dataset.id);
+  else selected.delete(cb.dataset.id);
+
+  const boxes = [...document.querySelectorAll('#empTbody input[type=checkbox][data-id]:not(:disabled)')];
+  document.getElementById('checkAll').checked = boxes.length > 0 && boxes.every(b => b.checked);
+  updateSelSummary();
+});
+
+document.getElementById('checkAll').addEventListener('change', e => {
+  const on = e.target.checked;
+  document.querySelectorAll('#empTbody input[type=checkbox][data-id]:not(:disabled)')
+    .forEach(cb => {
+      cb.checked = on;
+      if (on) selected.add(cb.dataset.id);
+      else selected.delete(cb.dataset.id);
+    });
+  updateSelSummary();
+});
+
+document.getElementById('searchEmp').addEventListener('input', renderEmployeeTable);
+document.getElementById('hideClaimed').addEventListener('change', renderEmployeeTable);
+
+document.getElementById('btnClaim').addEventListener('click', async () => {
+  const name  = document.getElementById('empName').value.trim();
+  const empNo = document.getElementById('empNo').value.trim();
+  const phone = document.getElementById('empPhone').value.trim();
+
+  // ① 身份核验
+  if (!name || !empNo) {
+    toast('请先填写姓名和工号，完成身份核验', 'error');
+    return;
+  }
+  if (!selected.size) {
+    toast('请至少选择一条待认领记录', 'error');
+    return;
+  }
+
+  const state = loadState();
+  const picked = state.records.filter(r => selected.has(r.id) && r.status === 'unclaimed');
+  if (!picked.length) {
+    toast('所选记录已被认领，请刷新后重试', 'error');
+    renderAll();
+    return;
+  }
+
+  const total = picked.reduce((s, r) => s + r.amount, 0);
+
+  // ② 二次确认
+  const res = await showModal('确认认领', `
+    <div class="confirm-box">
+      <p>认领人：<b>${esc(name)}</b>（工号 ${esc(empNo)}）</p>
+      <p>认领条数：<b>${picked.length}</b> 条，合计金额 <b class="amount">${fmtMoney(total)}</b></p>
+      <ul class="mini-list">
+        ${picked.map(r => `<li>${esc(r.company)} — ${fmtMoney(r.amount)} — ${esc(r.bank)}</li>`).join('')}
+      </ul>
+      <p class="hint">提交后系统将逐条执行原子性校验：若某条记录已被他人认领，
+      该条自动跳过，其余记录正常认领。</p>
+    </div>`, { okText: '确认认领' });
+  if (!res.ok) return;
+
+  saveEmployee({ name, empNo, phone });
+
+  // ③ 原子性认领
+  const out = performClaim([...selected], { name, empNo, phone });
+  if (!out.ok) { toast(out.msg, 'error'); return; }
+
+  const okList   = out.results.filter(r => r.ok);
+  const failList = out.results.filter(r => !r.ok);
+
+  selected.clear();
+  renderAll();
+  renderIdentityStatus();
+
+  if (okList.length && !failList.length) {
+    toast(`认领成功 ${okList.length} 条记录`, 'success');
+  } else if (okList.length && failList.length) {
+    toast(`成功 ${okList.length} 条，失败 ${failList.length} 条（已被他人认领）`, 'warn');
+  } else {
+    toast('认领失败：所选记录均已被他人认领', 'error');
+  }
+});
+
+/* =========================================================
+ *  8. 管理端渲染
+ * ========================================================= */
+function renderAdmin() {
+  const loginBox = document.getElementById('adminLogin');
+  const panel    = document.getElementById('adminPanel');
+
+  if (!adminAuthed) {
+    loginBox.classList.remove('hidden');
+    panel.classList.add('hidden');
+    return;
+  }
+  loginBox.classList.add('hidden');
+  panel.classList.remove('hidden');
+
+  const state = loadState();
+  const q      = (document.getElementById('adminSearch').value || '').trim().toLowerCase();
+  const filter = document.getElementById('adminFilter').value;
+
+  /* ---- 统计 ---- */
+  const claimedList   = state.records.filter(r => r.status === 'claimed');
+  const claimedAmount = claimedList.reduce((s, r) => s + r.amount, 0);
+  const totalAmount   = state.records.reduce((s, r) => s + r.amount, 0);
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><span>收款记录总数</span><b>${state.records.length}</b></div>
+    <div class="stat"><span>已认领</span><b class="ok">${claimedList.length}</b></div>
+    <div class="stat"><span>未认领</span><b class="warn">${state.records.length - claimedList.length}</b></div>
+    <div class="stat"><span>已认领金额</span><b class="ok">${fmtMoney(claimedAmount)}</b></div>
+    <div class="stat"><span>收款总金额</span><b>${fmtMoney(totalAmount)}</b></div>
+  `;
+
+  /* ---- 明细表 ---- */
+  const list = state.records.filter(r => {
+    if (filter !== 'all' && r.status !== filter) return false;
+    if (q) {
+      const hay = `${r.company} ${r.id} ${r.amount} ${r.bank} ` +
+        `${r.claimedBy ? r.claimedBy.name : ''} ` +
+        `${r.claimedBy ? r.claimedBy.empNo : ''}`;
+      if (!hay.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('adminTbody').innerHTML = list.length
+    ? list.map((r, i) => `
+        <tr>
+          <td class="muted">${i + 1}</td>
+          <td class="mono">${esc(r.id)}</td>
+          <td class="amount">${fmtMoney(r.amount)}</td>
+          <td>${esc(r.company)}</td>
+          <td>${bankTag(r.bank)}</td>
+          <td>${r.status === 'claimed'
+                ? '<span class="badge claimed">已认领</span>'
+                : '<span class="badge unclaimed">未认领</span>'}</td>
+          <td>${r.claimedBy ? esc(r.claimedBy.name) : '—'}</td>
+          <td class="mono">${r.claimedBy ? esc(r.claimedBy.empNo) : '—'}</td>
+          <td class="muted">${r.claimTime ? fmtTime(r.claimTime) : '—'}</td>
+          <td class="col-ops">
+            <button class="btn tiny" data-edit="${esc(r.id)}">编辑</button>
+            <button class="btn tiny danger" data-del="${esc(r.id)}">删除</button>
+            ${r.status === 'claimed'
+              ? `<button class="btn tiny danger" data-revoke="${esc(r.id)}">撤销</button>`
+              : ''}
+          </td>
+        </tr>`).join('')
+    : `<tr><td colspan="10" class="empty">没有符合条件的记录</td></tr>`;
+
+  /* ---- 日志 ---- */
+  const logList = document.getElementById('logList');
+  logList.innerHTML = state.logs.length
+    ? state.logs.slice(0, 60).map(l => `
+        <li class="log-item ${l.type}">
+          <span class="log-time">${fmtTime(l.time)}</span>
+          <span class="log-tag">${({
+            claim: '认领', revoke: '撤销', add: '新增', edit: '修改', del: '删除'
+          })[l.type] || l.type}</span>
+          <span class="log-text">${renderLogText(l)}</span>
+        </li>`).join('')
+    : '<li class="empty">暂无操作日志</li>';
+}
+
+function renderLogText(l) {
+  const base = `「${esc(l.company)}」${fmtMoney(l.amount)}（${esc(l.bank || '—')}）`;
+  switch (l.type) {
+    case 'claim':
+      return `${esc(l.operator)}（${esc(l.empNo || '')}）认领了${base}`;
+    case 'revoke':
+      return `管理员撤销了${base}的认领，原认领人：${esc(l.target ? l.target.name : '—')}，原因：${esc(l.note || '—')}`;
+    case 'add':
+      return `管理员新增了收款记录${base}`;
+    case 'edit':
+      return `管理员修改了收款记录${base}`;
+    case 'del':
+      return `管理员删除了收款记录${base}`;
+    default:
+      return base;
+  }
+}
+
+/* ---------- 管理端事件 ---------- */
+document.getElementById('btnLogin').addEventListener('click', () => {
+  const pwd = document.getElementById('adminPwd').value;
+  if (pwd !== ADMIN_PASSWORD) {
+    toast('管理员密码错误', 'error');
+    return;
+  }
+  adminAuthed = true;
+  sessionStorage.setItem('claim_admin_auth', '1');
+  document.getElementById('adminPwd').value = '';
+  renderAll();
+  toast('登录成功', 'success');
+});
+document.getElementById('adminPwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnLogin').click();
+});
+
+document.getElementById('btnLogout').addEventListener('click', () => {
+  adminAuthed = false;
+  sessionStorage.removeItem('claim_admin_auth');
+  renderAll();
+});
+
+document.getElementById('adminSearch').addEventListener('input', renderAdmin);
+document.getElementById('adminFilter').addEventListener('change', renderAdmin);
+
+/* ---------- 记录表单（新增 / 编辑 共用） ---------- */
+function recordFormHTML(rec) {
+  const isEdit = !!rec;
+  const bankOptions = BANK_NAMES.map(b =>
+    `<option value="${esc(b)}" ${isEdit && rec.bank === b ? 'selected' : ''}>${esc(b)}</option>`
+  ).join('');
+
+  return `
+    <div class="form-grid" style="margin-top:0">
+      <label class="field"><span>记录编号 <i>*</i></span>
+        <input name="id" type="text" value="${isEdit ? esc(rec.id) : ''}" placeholder="如 RC20260601011">
+      </label>
+      <label class="field"><span>收款金额 <i>*</i></span>
+        <input name="amount" type="number" step="0.01" min="0.01"
+               value="${isEdit ? rec.amount : ''}" placeholder="0.00">
+      </label>
+      <label class="field"><span>对应公司名称 <i>*</i></span>
+        <input name="company" type="text" value="${isEdit ? esc(rec.company) : ''}" placeholder="请输入公司全称">
+      </label>
+      <label class="field"><span>打款账户名称 <i>*</i></span>
+        <select name="bank">${bankOptions}</select>
+      </label>
+    </div>
+    ${isEdit && rec.status === 'claimed'
+      ? '<p class="hint">⚠ 该记录当前为「已认领」状态，修改金额 / 公司 / 账户不会清除认领人与认领时间。</p>'
+      : ''}
+  `;
+}
+
+/** 校验表单值并返回标准数据 */
+function validateRecordValues(values, excludeId) {
+  const id      = (values.id || '').trim();
+  const company = (values.company || '').trim();
+  const bank    = values.bank;
+  const amount  = Number(values.amount);
+
+  if (!id)            return { ok: false, msg: '记录编号不能为空' };
+  if (!company)       return { ok: false, msg: '对应公司名称不能为空' };
+  if (!BANK_NAMES.includes(bank)) return { ok: false, msg: '请选择有效的打款账户' };
+  if (!isFinite(amount) || amount <= 0) return { ok: false, msg: '收款金额必须为大于 0 的数字' };
+
+  const state = loadState();
+  const dup = state.records.some(r => r.id === id && r.id !== excludeId);
+  if (dup) return { ok: false, msg: `记录编号「${id}」已存在，请更换` };
+
+  return { ok: true, data: { id, amount, company, bank } };
+}
+
+/* 新增记录 */
+document.getElementById('btnAdd').addEventListener('click', async () => {
+  const res = await showModal('新增收款记录', recordFormHTML(null), { okText: '保存并新增' });
+  if (!res.ok) return;
+
+  const v = validateRecordValues(res.values, null);
+  if (!v.ok) { toast(v.msg, 'error'); return; }
+
+  const out = addRecord(v.data);
+  if (!out.ok) { toast(out.msg, 'error'); return; }
+
+  toast('新增收款记录成功', 'success');
+  renderAll();
+});
+
+/* 编辑 / 删除 / 撤销（事件委托） */
+document.getElementById('adminTbody').addEventListener('click', async e => {
+  /* --- 撤销 --- */
+  const rvBtn = e.target.closest('[data-revoke]');
+  if (rvBtn) {
+    const id = rvBtn.dataset.revoke;
+    const state = loadState();
+    const rec = state.records.find(r => r.id === id);
+
+    if (!rec || rec.status !== 'claimed') {
+      toast('该记录当前不可撤销，请刷新后重试', 'error');
+      renderAll();
+      return;
+    }
+
+    const res = await showModal('异常撤销确认', `
+      <p>即将撤销以下记录的认领状态：</p>
+      <ul class="mini-list">
+        <li>${esc(rec.company)} — <b>${fmtMoney(rec.amount)}</b> — ${esc(rec.bank)}</li>
+      </ul>
+      <p>当前认领人：<b>${esc(rec.claimedBy.name)}</b>（工号 ${esc(rec.claimedBy.empNo)}）</p>
+      <p>认领时间：${fmtTime(rec.claimTime)}</p>
+      <p class="hint">撤销后该记录将恢复为「未认领」状态，可被员工重新认领。</p>
+    `, { okText: '确认撤销', requireNote: true,
+         notePlaceholder: '请填写撤销原因（必填），如：员工误认领 / 客户退款等' });
+
+    if (!res.ok) return;
+    if (!res.note) { toast('请填写撤销原因', 'error'); return; }
+
+    const out = revokeClaim(id, res.note);
+    if (!out.ok) { toast(out.msg, 'error'); renderAll(); return; }
+
+    toast('已撤销该记录的认领，恢复为未认领状态', 'success');
+    renderAll();
+    return;
+  }
+
+  /* --- 编辑 --- */
+  const edBtn = e.target.closest('[data-edit]');
+  if (edBtn) {
+    const id = edBtn.dataset.edit;
+    const state = loadState();
+    const rec = state.records.find(r => r.id === id);
+    if (!rec) { toast('记录不存在，请刷新', 'error'); renderAll(); return; }
+
+    const res = await showModal('修改收款记录', recordFormHTML(rec), { okText: '保存修改' });
+    if (!res.ok) return;
+
+    const v = validateRecordValues(res.values, id);
+    if (!v.ok) { toast(v.msg, 'error'); return; }
+
+    const out = updateRecord(id, v.data);
+    if (!out.ok) { toast(out.msg, 'error'); return; }
+
+    selected.clear();   // 编号可能变化，清空员工端勾选，避免脏数据
+    toast('修改成功', 'success');
+    renderAll();
+    return;
+  }
+
+  /* --- 删除 --- */
+  const delBtn = e.target.closest('[data-del]');
+  if (delBtn) {
+    const id = delBtn.dataset.del;
+    const state = loadState();
+    const rec = state.records.find(r => r.id === id);
+    if (!rec) { toast('记录不存在，请刷新', 'error'); renderAll(); return; }
+
+    const isClaimed = rec.status === 'claimed';
+    const res = await showModal('删除收款记录', `
+      <p>确认删除以下收款记录？</p>
+      <ul class="mini-list">
+        <li>${esc(rec.id)} — ${esc(rec.company)} — <b>${fmtMoney(rec.amount)}</b> — ${esc(rec.bank)}</li>
+      </ul>
+      ${isClaimed
+        ? `<p style="color:#dc2626">⚠ 该记录已被 <b>${esc(rec.claimedBy.name)}</b>（工号 ${esc(rec.claimedBy.empNo)}）认领，删除后认领信息将一并丢失，且不可恢复。</p>`
+        : '<p class="hint">删除后该记录不可恢复。</p>'}
+    `, { okText: '确认删除' });
+
+    if (!res.ok) return;
+
+    const out = deleteRecord(id);
+    if (!out.ok) { toast(out.msg, 'error'); renderAll(); return; }
+
+    selected.delete(id);
+    toast('已删除该收款记录', 'success');
+    renderAll();
+  }
+});
+
+/* =========================================================
+ *  9. Excel 导出
+ *  列：序号、交易金额、对应公司名称、打款账户名称、认领状态、认领人、认领时间
+ * ========================================================= */
+document.getElementById('btnExport').addEventListener('click', () => {
+  const state = loadState();
+  if (!state.records.length) { toast('暂无可导出的数据', 'error'); return; }
+
+  const headers = ['序号', '交易金额', '对应公司名称', '打款账户名称',
+                   '认领状态', '认领人', '认领时间'];
+
+  const rows = state.records.map((r, i) => [
+    i + 1,
+    Number(r.amount).toFixed(2),
+    r.company,
+    r.bank,
+    r.status === 'claimed' ? '已认领' : '未认领',
+    r.claimedBy ? r.claimedBy.name : '',
+    r.claimTime ? fmtTime(r.claimTime) : ''
+  ]);
+
+  const th = headers
+    .map(h => `<th style="background:#DCE6F1;font-weight:bold;border:1px solid #999;">${esc(h)}</th>`)
+    .join('');
+
+  const trs = rows.map(row =>
+    '<tr>' + row.map((v, idx) => {
+      const text = String(v ?? '')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      // 金额列（第 2 列，索引 1）保留两位小数格式，其余按文本，避免科学计数
+      const style = idx === 1
+        ? 'border:1px solid #ccc;mso-number-format:"0\\.00";'
+        : 'border:1px solid #ccc;mso-number-format:"\\@";';
+      return `<td style="${style}">${text}</td>`;
+    }).join('') + '</tr>'
+  ).join('');
+
+  const html =
+    `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
+    `xmlns:x="urn:schemas-microsoft-com:office:excel">` +
+    `<head><meta charset="utf-8">` +
+    `<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>` +
+    `<x:Name>收款认领明细</x:Name><x:WorksheetOptions><x:DisplayGridlines/>` +
+    `</x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->` +
+    `</head><body><table border="1" cellspacing="0" cellpadding="4">` +
+    `<tr>${th}</tr>${trs}</table></body></html>`;
+
+  const blob = new Blob(['\ufeff' + html], {
+    type: 'application/vnd.ms-excel;charset=utf-8'
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `收款认领明细_${new Date().toISOString().slice(0, 10)}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+  toast('Excel 导出成功', 'success');
+});
+
+/* =========================================================
+ *  10. 视图切换 / 初始化
+ * ========================================================= */
+function renderAll() {
+  renderEmployeeTable();
+  renderIdentityStatus();
+  renderAdmin();
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-' + tab.dataset.view).classList.add('active');
+    renderAll();
+  });
+});
+
+/* 多标签页 / 多窗口数据同步 */
+window.addEventListener('storage', e => {
+  if (e.key === STORAGE_KEY) renderAll();
+});
+
+/* 启动 */
+(function init() {
+  const emp = loadEmployee();
+  document.getElementById('empName').value  = emp.name  || '';
+  document.getElementById('empNo').value    = emp.empNo || '';
+  document.getElementById('empPhone').value = emp.phone || '';
+
+  // 身份输入即时保存 + 状态刷新
+  ['empName', 'empNo', 'empPhone'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      saveEmployee({
+        name:  document.getElementById('empName').value.trim(),
+        empNo: document.getElementById('empNo').value.trim(),
+        phone: document.getElementById('empPhone').value.trim()
+      });
+      renderIdentityStatus();
+    });
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
