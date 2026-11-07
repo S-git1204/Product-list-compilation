@@ -32,13 +32,17 @@
   .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:60vh}
   table{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left}
+  /* 让第4、5、6、7列的表头文字居中 */
+th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
+    text-align: center;
+}
   th{background:#f8fafc;font-weight:600;color:#374151;position:sticky;top:0;z-index:2;white-space:nowrap}
   tbody tr:hover{background:#fbfdff}
   td input{width:100%;border:1px solid transparent;background:transparent;padding:6px;
            border-radius:5px;font-size:13px;font-family:inherit;color:inherit}
   td input:hover{border-color:var(--line)}
   td input:focus{border-color:var(--primary);background:#fff;outline:none}
-  td input.num{text-align:right}
+  td input.num{text-align:center}
   td input[readonly]{background:#f3f6fa;color:#334155;cursor:default}
   td input[readonly]:hover{border-color:transparent}
   td.idx{color:var(--muted);width:46px;text-align:center}
