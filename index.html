@@ -2,1302 +2,566 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>企业收款认领平台</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>粘贴表格文字 → 生成产品清单 Excel</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --primary: #2563eb;
-    --primary-dark: #1d4ed8;
-    --ok: #059669;
-    --warn: #d97706;
-    --danger: #dc2626;
-    --line: #e5e7eb;
-    --muted: #6b7280;
+  :root{
+    --bg:#f5f7fa; --card:#fff; --line:#e3e8ef; --primary:#2f6fed;
+    --text:#1f2937; --muted:#6b7280; --danger:#dc2626;
   }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: #f4f6fb;
-    color: #1f2937;
-    font-size: 14px;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* ---------- 顶栏 ---------- */
-  .topbar {
-    background: linear-gradient(120deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
-    color: #fff;
-    padding: 18px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 14px;
-    box-shadow: 0 4px 20px rgba(37, 99, 235, .25);
-  }
-  .brand { display: flex; align-items: center; gap: 14px; }
-  .logo {
-    width: 46px; height: 46px; border-radius: 13px;
-    background: rgba(255,255,255,.18);
-    border: 1px solid rgba(255,255,255,.35);
-    display: grid; place-items: center;
-    font-size: 22px; font-weight: 700;
-  }
-  .brand h1 { font-size: 19px; letter-spacing: .5px; }
-  .brand p { font-size: 12px; opacity: .8; }
-  .tabs { display: flex; gap: 8px; background: rgba(255,255,255,.14); padding: 5px; border-radius: 12px; }
-  .tab {
-    border: none; background: transparent; color: #fff; cursor: pointer;
-    padding: 8px 22px; border-radius: 9px; font-size: 14px; font-weight: 500;
-    transition: .2s; font-family: inherit;
-  }
-  .tab:hover { background: rgba(255,255,255,.14); }
-  .tab.active { background: #fff; color: var(--primary); font-weight: 600; }
-
-  /* ---------- 布局 ---------- */
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 60px; }
-  .view { display: none; animation: fade .25s ease; }
-  .view.active { display: block; }
-  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-
-  .card {
-    background: #fff; border-radius: 16px; padding: 22px 24px;
-    box-shadow: 0 2px 14px rgba(17, 24, 39, .06);
-    border: 1px solid #eef1f6;
-    margin-bottom: 20px;
-  }
-  .card h2 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
-  .card h2::before {
-    content: ''; width: 4px; height: 16px; border-radius: 3px;
-    background: linear-gradient(180deg, #3b82f6, #2563eb);
-  }
-  .card-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap; margin-bottom: 16px;
-  }
-  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
-
-  /* ---------- 表单 ---------- */
-  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-top: 16px; }
-  .field { display: flex; flex-direction: column; gap: 6px; }
-  .field span { font-size: 13px; color: #374151; font-weight: 500; }
-  .field span i { color: var(--danger); font-style: normal; }
-  input[type=text], input[type=password], input[type=search], input[type=number], select, textarea {
-    width: 100%; padding: 10px 13px; border: 1px solid var(--line);
-    border-radius: 10px; font-size: 14px; font-family: inherit;
-    background: #fbfcfe; transition: .18s; color: #111827; outline: none;
-  }
-  input:focus, select:focus, textarea:focus {
-    border-color: var(--primary); background: #fff;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
-  }
-  .verified {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #ecfdf5; color: var(--ok); border: 1px solid #a7f3d0;
-    padding: 4px 12px; border-radius: 999px; font-size: 12px; margin-top: 12px;
-  }
-
-  /* ---------- 按钮 ---------- */
-  .btn {
-    border: 1px solid var(--line); background: #fff; color: #374151;
-    padding: 9px 18px; border-radius: 10px; cursor: pointer;
-    font-size: 14px; font-family: inherit; font-weight: 500; transition: .18s;
-    white-space: nowrap;
-  }
-  .btn:hover { background: #f3f4f6; border-color: #d1d5db; }
-  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
-  .btn.primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
-  .btn.primary:disabled { background: #93b4f7; border-color: #93b4f7; cursor: not-allowed; }
-  .btn.danger { background: #fff; border-color: #fecaca; color: var(--danger); }
-  .btn.danger:hover { background: #fef2f2; border-color: #fca5a5; }
-  .btn.tiny { padding: 5px 12px; font-size: 12.5px; border-radius: 8px; }
-
-  /* ---------- 表格 ---------- */
-  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--line); }
-  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-  thead th {
-    background: #f8fafc; text-align: left; padding: 12px 14px;
-    font-weight: 600; color: #475569; font-size: 12.5px;
-    white-space: nowrap; border-bottom: 1px solid var(--line);
-  }
-  tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover { background: #fafbfe; }
-  tbody tr.row-disabled { background: #f9fafb; color: #9ca3af; }
-  tbody tr.row-disabled:hover { background: #f9fafb; }
-  td.amount { font-weight: 600; color: #0f172a; font-variant-numeric: tabular-nums; }
-  tbody tr.row-disabled td.amount { color: #9ca3af; }
-  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; color: #475569; }
-  .muted { color: var(--muted); }
-  .col-check { width: 44px; text-align: center; }
-  .col-ops { white-space: nowrap; }
-  .col-ops .btn + .btn { margin-left: 6px; }
-  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
-  input[type=checkbox]:disabled { cursor: not-allowed; }
-  .empty { text-align: center; color: var(--muted); padding: 38px 0 !important; font-size: 13px; }
-
-  /* ---------- 徽章 ---------- */
-  .badge {
-    display: inline-block; padding: 3px 11px; border-radius: 999px;
-    font-size: 12px; font-weight: 500; white-space: nowrap;
-  }
-  .badge.unclaimed { background: #fef3c7; color: #b45309; }
-  .badge.claimed { background: #d1fae5; color: #047857; }
-
-  /* ---------- 打款账户彩色标签 ---------- */
-  .bank {
-    display: inline-block; font-weight: 700; font-size: 13px;
-    padding: 3px 11px; border-radius: 8px; border: 1px solid;
-    white-space: nowrap; letter-spacing: .3px;
-  }
-
-  /* ---------- 过滤条 / 操作条 ---------- */
-  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .filters input[type=search] { width: 200px; }
-  .filters select { width: 132px; }
-  .switch { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: #475569; cursor: pointer; user-select: none; }
-
-  .action-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap; margin-top: 16px;
-    padding-top: 16px; border-top: 1px dashed var(--line);
-  }
-  .action-bar b { color: var(--primary); }
-
-  /* ---------- 统计 ---------- */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
-  .stat {
-    background: #fff; border: 1px solid #eef1f6; border-radius: 14px;
-    padding: 16px 18px; box-shadow: 0 2px 10px rgba(17,24,39,.04);
-    display: flex; flex-direction: column; gap: 4px;
-  }
-  .stat span { font-size: 12.5px; color: var(--muted); }
-  .stat b { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .stat b.ok { color: var(--ok); }
-  .stat b.warn { color: var(--warn); }
-
-  /* ---------- 日志 ---------- */
-  .log-list { list-style: none; margin-top: 14px; max-height: 340px; overflow-y: auto; }
-  .log-item {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding: 10px 12px; border-radius: 10px; font-size: 13px;
-    border-bottom: 1px dashed #eef1f6;
-  }
-  .log-time { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-  .log-tag { padding: 1px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 600; }
-  .log-item.claim  .log-tag { background: #dbeafe; color: #1d4ed8; }
-  .log-item.revoke .log-tag { background: #fee2e2; color: #b91c1c; }
-  .log-item.add    .log-tag { background: #e0f2fe; color: #0369a1; }
-  .log-item.edit   .log-tag { background: #fef9c3; color: #a16207; }
-  .log-item.del    .log-tag { background: #fee2e2; color: #b91c1c; }
-  .log-text { flex: 1; color: #374151; min-width: 200px; }
-
-  /* ---------- 登录 ---------- */
-  .login-card { max-width: 400px; margin: 60px auto; text-align: center; }
-  .login-card h2 { justify-content: center; }
-  .login-card h2::before { display: none; }
-  .login-card input { margin: 20px 0 14px; text-align: center; }
-  .login-card .btn { width: 100%; }
-
-  /* ---------- 弹窗 ---------- */
-  .modal-mask {
-    position: fixed; inset: 0; background: rgba(15, 23, 42, .5);
-    backdrop-filter: blur(3px); display: grid; place-items: center;
-    z-index: 100; padding: 20px; animation: fade .18s ease;
-  }
-  .modal {
-    background: #fff; border-radius: 18px; padding: 24px;
-    width: min(520px, 100%); max-height: 88vh; overflow-y: auto;
-    box-shadow: 0 24px 60px rgba(0,0,0,.28);
-    animation: pop .22s cubic-bezier(.2,.9,.3,1.3);
-  }
-  @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
-  .modal h3 { font-size: 17px; margin-bottom: 14px; }
-  .modal-body { font-size: 14px; color: #374151; }
-  .modal-body p { margin-bottom: 8px; }
-  .modal-note { margin-top: 12px; resize: vertical; min-height: 66px; }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
-  .mini-list {
-    list-style: none; background: #f8fafc; border-radius: 10px;
-    padding: 10px 14px; margin: 10px 0; max-height: 168px; overflow-y: auto;
-    font-size: 13px; color: #334155;
-  }
-  .mini-list li { padding: 3px 0; }
-  .confirm-box b { color: #0f172a; }
-  .confirm-box b.amount { color: var(--primary); }
-
-  /* ---------- Toast ---------- */
-  #toastWrap {
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-    z-index: 200; display: flex; flex-direction: column; gap: 10px; align-items: center;
-  }
-  .toast {
-    padding: 11px 22px; border-radius: 11px; font-size: 13.5px; color: #fff;
-    box-shadow: 0 8px 26px rgba(0,0,0,.18); animation: slideIn .25s ease;
-    max-width: 90vw;
-  }
-  .toast.info    { background: #334155; }
-  .toast.success { background: #059669; }
-  .toast.error   { background: #dc2626; }
-  .toast.warn    { background: #d97706; }
-  .toast.out     { opacity: 0; transform: translateY(-10px); transition: .3s; }
-  @keyframes slideIn { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
-
-  .hidden { display: none !important; }
-
-  @media (max-width: 640px) {
-    .topbar { padding: 14px 16px; }
-    .brand h1 { font-size: 16px; }
-    .wrap { padding: 16px 12px 40px; }
-    .card { padding: 16px; border-radius: 14px; }
-    .filters input[type=search] { width: 100%; }
-  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--text);padding:20px}
+  .wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+  h1{font-size:17px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.7}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  textarea{width:100%;height:190px;resize:vertical;border:1px solid var(--line);border-radius:8px;
+           padding:10px;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.7;
+           outline:none;color:var(--text);background:#fcfdff}
+  textarea:focus{border-color:var(--primary);background:#fff}
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+  button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:8px;
+         padding:8px 14px;font-size:14px;color:var(--text);transition:.15s}
+  button:hover{border-color:var(--primary);color:var(--primary)}
+  button.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  button.primary:hover{opacity:.9;color:#fff}
+  label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  label input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px;
+              outline:none;width:72px;text-align:center;color:var(--text)}
+  .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:60vh}
+  table{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
+  th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left}
+  th{background:#f8fafc;font-weight:600;color:#374151;position:sticky;top:0;z-index:2;white-space:nowrap}
+  tbody tr:hover{background:#fbfdff}
+  td input{width:100%;border:1px solid transparent;background:transparent;padding:6px;
+           border-radius:5px;font-size:13px;font-family:inherit;color:inherit}
+  td input:hover{border-color:var(--line)}
+  td input:focus{border-color:var(--primary);background:#fff;outline:none}
+  td input.num{text-align:right}
+  td input[readonly]{background:#f3f6fa;color:#334155;cursor:default}
+  td input[readonly]:hover{border-color:transparent}
+  td.idx{color:var(--muted);width:46px;text-align:center}
+  td.op{width:60px;text-align:center}
+  .del{border:none;background:transparent;color:var(--danger);padding:4px 6px;font-size:12px}
+  .del:hover{background:#fef2f2;border-radius:5px}
+  .status{font-size:13px;color:var(--muted);margin-left:auto}
+  .empty{padding:36px;text-align:center;color:var(--muted);font-size:13px}
+  .tip{font-size:12px;color:var(--muted);margin-top:8px}
+  /* 合计行 */
+  tfoot td{background:#f0f5ff;font-weight:600;border-top:2px solid #c7d8f8;border-bottom:none;padding:8px}
+  tfoot td.num{text-align:right}
+  tfoot td.total-label{text-align:right;color:#1d4ed8}
 </style>
 </head>
 <body>
-
-<header class="topbar">
-  <div class="brand">
-    <div class="logo">￥</div>
-    <div>
-      <h1>企业收款认领平台</h1>
-      <p>收款记录认领 · 原子性校验 · 管理员核验与撤销</p>
-    </div>
-  </div>
-  <div class="tabs">
-    <button class="tab active" data-view="employee">员工端</button>
-    <button class="tab" data-view="admin">管理端</button>
-  </div>
-</header>
-
 <div class="wrap">
 
-  <!-- ==================== 员工端 ==================== -->
-  <section id="view-employee" class="view active">
-
-    <!-- 身份核验 -->
-    <div class="card">
-      <h2>① 身份核验</h2>
-      <div class="form-grid">
-        <label class="field"><span>姓名 <i>*</i></span>
-          <input type="text" id="empName" placeholder="请输入本人真实姓名" autocomplete="off">
-        </label>
-        <label class="field"><span>工号 <i>*</i></span>
-          <input type="text" id="empNo" placeholder="请输入员工工号" autocomplete="off">
-        </label>
-        <label class="field"><span>手机号（选填）</span>
-          <input type="text" id="empPhone" placeholder="用于身份核对" autocomplete="off">
-        </label>
-      </div>
-      <div id="identityStatus"></div>
-      <p class="hint">认领时会将以上身份信息与所选收款记录绑定，请确保填写准确无误。</p>
+  <div class="card">
+    <h1>粘贴表格文字 → 整理成产品清单 → 导出 Excel</h1>
+    <div class="sub">
+      直接从网页表格里全选复制，粘贴到下面即可。支持 <b>制表符 / 多空格 / 竖线</b> 分隔；
+      自动识别表头，自动忽略「产品编号、描述、备注」等无关列；
+      <b>产品金额 = 产品数量 × 产品单价（自动计算，不取原始金额）</b>。
     </div>
-
-    <!-- 待认领记录 -->
-    <div class="card">
-      <div class="card-head">
-        <h2>② 待认领收款记录</h2>
-        <div class="filters">
-          <input type="search" id="searchEmp" placeholder="搜索公司 / 记录编号 / 打款账户">
-          <label class="switch"><input type="checkbox" id="hideClaimed"> 隐藏已认领</label>
-        </div>
-      </div>
-
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th class="col-check"><input type="checkbox" id="checkAll" title="全选"></th>
-              <th>记录编号</th>
-              <th>收款金额</th>
-              <th>对应公司名称</th>
-              <th>打款账户名称</th>
-              <th>认领状态</th>
-            </tr>
-          </thead>
-          <tbody id="empTbody"></tbody>
-        </table>
-      </div>
-
-      <div class="action-bar">
-        <div>已选择 <b id="selCount">0</b> 条记录，合计金额 <b id="selAmount">¥0.00</b></div>
-        <button class="btn primary" id="btnClaim">确认认领</button>
-      </div>
+    <div style="margin-top:12px">
+      <textarea id="input" placeholder="把网页表格复制粘贴到这里……"></textarea>
     </div>
-  </section>
-
-  <!-- ==================== 管理端 ==================== -->
-  <section id="view-admin" class="view">
-
-    <!-- 登录 -->
-    <div id="adminLogin" class="card login-card">
-      <h2>管理员登录</h2>
-      <input type="password" id="adminPwd" placeholder="请输入管理员密码">
-      <button class="btn primary" id="btnLogin">登 录</button>
-      <p class="hint">演示密码：admin123</p>
-    </div>
-
-    <!-- 面板 -->
-    <div id="adminPanel" class="hidden">
-      <div class="stats" id="stats"></div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2>收款记录管理与认领结果</h2>
-          <div class="filters">
-            <input type="search" id="adminSearch" placeholder="搜索公司 / 认领人 / 工号">
-            <select id="adminFilter">
-              <option value="all">全部状态</option>
-              <option value="unclaimed">未认领</option>
-              <option value="claimed">已认领</option>
-            </select>
-            <button class="btn primary" id="btnAdd">+ 新增记录</button>
-            <button class="btn" id="btnExport">导出 Excel</button>
-            <button class="btn" id="btnLogout">退出</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>记录编号</th>
-                <th>收款金额</th>
-                <th>对应公司名称</th>
-                <th>打款账户名称</th>
-                <th>认领状态</th>
-                <th>认领人</th>
-                <th>工号</th>
-                <th>认领时间</th>
-                <th class="col-ops">操作</th>
-              </tr>
-            </thead>
-            <tbody id="adminTbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h2>操作日志</h2>
-        <ul class="log-list" id="logList"></ul>
-      </div>
-    </div>
-  </section>
-
-</div>
-
-<!-- 弹窗 -->
-<div class="modal-mask hidden" id="modalMask">
-  <div class="modal">
-    <h3 id="modalTitle">确认</h3>
-    <div class="modal-body" id="modalBody"></div>
-    <div class="modal-actions">
-      <button class="btn" id="modalCancel">取消</button>
-      <button class="btn primary" id="modalOk">确定</button>
+    <div class="bar">
+      <button class="primary" id="parseBtn">解析并生成表格</button>
+      <button id="sampleBtn">填充示例</button>
+      <button id="clearBtn">清空</button>
+      <label>默认税率 <input type="text" id="defaultTax" value="0.13"></label>
+      <span class="tip">税率可写 13% 或 0.13，导出时统一为百分比格式</span>
     </div>
   </div>
+
+  <div class="card">
+    <div class="bar" style="margin-top:0;margin-bottom:10px">
+      <button class="primary" id="exportBtn">导出 Excel</button>
+      <button id="addRowBtn">新增一行</button>
+      <span class="status" id="status">共 0 条</span>
+    </div>
+    <div class="tablewrap">
+      <table id="result">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>产品名称</th>
+            <th>产品型号</th>
+            <th>产品数量</th>
+            <th>产品单价</th>
+            <th>产品金额</th>
+            <th>税率</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td></td>
+            <td>合计</td>
+            <td></td>
+            <td class="num" id="totalQty">0</td>
+            <td></td>
+            <td class="num" id="totalAmount">0.00</td>
+            <td></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="tip">表格内容可直接修改；金额由「数量 × 单价」自动计算，不可手工编辑；合计行实时更新。</div>
+  </div>
+
 </div>
 
-<!-- Toast -->
-<div id="toastWrap"></div>
-
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
-/* =========================================================
- *  1. 常量 / 工具
- * ========================================================= */
-const STORAGE_KEY  = 'claim_system_v2';
-const EMP_KEY      = 'claim_employee_v2';
-const LOCK_KEY     = 'claim_lock_v2';
-const LOCK_TTL     = 3000;                 // 锁超时（毫秒）
-const ADMIN_PASSWORD = 'admin123';
-const LOG_LIMIT    = 200;
+(function () {
+  'use strict';
 
-/* 四个打款账户 + 配色（加粗、区分色号） */
-const BANKS = {
-  '农业银行': { fg: '#047857', bg: '#ecfdf5', bd: '#a7f3d0' },
-  '建设银行': { fg: '#1d4ed8', bg: '#eff6ff', bd: '#bfdbfe' },
-  '工商银行': { fg: '#b91c1c', bg: '#fef2f2', bd: '#fecaca' },
-  '交通银行': { fg: '#6d28d9', bg: '#f5f3ff', bd: '#ddd6fe' }
-};
-const BANK_NAMES = Object.keys(BANKS);
+  /* =========================================================
+     一、基础工具
+     ========================================================= */
 
-const fmtMoney = n => '¥' + Number(n || 0).toLocaleString('zh-CN', {
-  minimumFractionDigits: 2, maximumFractionDigits: 2
-});
-const fmtTime = iso => iso
-  ? new Date(iso).toLocaleString('zh-CN', { hour12: false })
-  : '—';
-const esc = s => String(s ?? '').replace(/[&<>"']/g,
-  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const uid = p => p + Date.now().toString(36).toUpperCase() +
-  Math.random().toString(36).slice(2, 6).toUpperCase();
+  var $ = function (s) { return document.querySelector(s); };
 
-function bankTag(bank) {
-  const c = BANKS[bank] || { fg: '#475569', bg: '#f1f5f9', bd: '#e2e8f0' };
-  return `<span class="bank" style="color:${c.fg};background:${c.bg};border-color:${c.bd}">${esc(bank)}</span>`;
-}
+  function escapeAttr(v) {
+    return String(v == null ? '' : v)
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
 
-/* =========================================================
- *  2. 数据层（模拟服务端存储）
- * ========================================================= */
-function seedData() {
-  const raw = [
-    ['RC20260601001', 12800.00, '杭州云启科技有限公司',       '农业银行'],
-    ['RC20260601002',  5600.00, '上海鼎信贸易有限公司',       '建设银行'],
-    ['RC20260601003', 23800.00, '深圳市恒泰电子有限公司',     '工商银行'],
-    ['RC20260601004',  3200.00, '北京星辰文化传媒有限公司',   '交通银行'],
-    ['RC20260601005',  9800.50, '广州瑞丰供应链管理有限公司', '农业银行'],
-    ['RC20260601006', 15600.00, '成都天工机械制造有限公司',   '建设银行'],
-    ['RC20260601007',  7600.00, '南京博远信息技术有限公司',   '工商银行'],
-    ['RC20260601008', 42000.00, '苏州精诚新材料有限公司',     '交通银行'],
-    ['RC20260601009',  2100.00, '武汉智联网络科技有限公司',   '农业银行'],
-    ['RC20260601010', 18500.00, '西安华信建设集团有限公司',   '建设银行'],
+  function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+
+  /** 从任意文本中抽出数字，如 "¥1,500.00元" -> 1500 */
+  function toNumber(v) {
+    if (v === null || v === undefined) return null;
+    var s = String(v).replace(/\u00a0/g, ' ').trim();
+    if (!s) return null;
+    s = s.replace(/[,，\s]/g, '').replace(/[¥￥$]/g, '');
+    var m = s.match(/-?\d+(?:\.\d+)?/);
+    if (!m) return null;
+    var n = parseFloat(m[0]);
+    return isNaN(n) ? null : n;
+  }
+
+  /** 税率解析：13% -> 0.13 ；13 -> 0.13 ；0.13 -> 0.13 */
+  function toTax(v, def) {
+    if (v === null || v === undefined) return def;
+    var s = String(v).trim();
+    if (!s) return def;
+    var pm = s.match(/(\d+(?:\.\d+)?)\s*[%％]/);
+    if (pm) return parseFloat(pm[1]) / 100;
+    var n = toNumber(s);
+    if (n === null) return def;
+    return n > 1 ? n / 100 : n;
+  }
+
+  function clean(v) {
+    return String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+  }
+
+  function looksNumeric(s) {
+    s = String(s).trim();
+    if (!s) return false;
+    return /^[¥￥$]?\s*[-+]?\d/.test(s);
+  }
+
+  function fmtNum(n) {
+    return (n === null || n === undefined || n === '') ? '' : String(n);
+  }
+
+  /* =========================================================
+     二、把粘贴的文字切成「行 → 单元格」
+     ========================================================= */
+
+  function splitCells(line) {
+    var s = line.replace(/\u00a0/g, ' ');
+
+    if (s.indexOf('\t') !== -1) {
+      return s.split('\t').map(function (v) { return v.trim(); });
+    }
+    if (s.indexOf('|') !== -1) {
+      var parts = s.split('|').map(function (v) { return v.trim(); });
+      if (parts[0] === '') parts.shift();
+      if (parts[parts.length - 1] === '') parts.pop();
+      return parts;
+    }
+    if (/\s{2,}/.test(s)) {
+      return s.split(/\s{2,}/).map(function (v) { return v.trim(); })
+              .filter(function (v) { return v !== ''; });
+    }
+    return s.split(/\s+/).filter(function (v) { return v !== ''; });
+  }
+
+  function toMatrix(text) {
+    var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+    var rows = [];
+    for (var i = 0; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      rows.push(splitCells(lines[i]));
+    }
+    return rows;
+  }
+
+  /* =========================================================
+     三、表头识别
+     ========================================================= */
+
+  var HEADER_MAP = [
+    { field: 'tax',    keys: ['税率', '税点', 'tax'] },
+    { field: 'amount', keys: ['价税合计', '含税金额', '总金额', '金额', '总价', '合计', '小计', '总额', 'amount'] },
+    { field: 'price',  keys: ['单价', '价格', '售价', 'price', 'unitprice'] },
+    { field: 'qty',    keys: ['数量', '件数', '个数', '数目', 'qty', 'quantity'] },
+    { field: 'model',  keys: ['规格型号', '型号', '规格', 'model', 'spec', '机种'] },
+    { field: 'code',   keys: ['编号', '编码', '料号', '货号', 'code', 'sku', '序号', 'id'] },
+    { field: 'name',   keys: ['产品名称', '商品名称', '物料名称', '货物名称', '品名', '名称', '产品', '商品', '物料', '货物', 'name', '项目'] },
+    { field: 'remark', keys: ['备注', '说明', '描述', 'remark', 'note', 'desc'] }
   ];
-  return {
-    records: raw.map(([id, amount, company, bank]) => ({
-      id, amount, company, bank,
-      status: 'unclaimed',
-      claimedBy: null,
-      claimTime: null,
-      claimNo: null,
-      revokeCount: 0
-    })),
-    logs: []
-  };
-}
 
-function loadState() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    const s = seedData();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
-    return s;
-  }
-  try { return JSON.parse(raw); }
-  catch (e) { return seedData(); }
-}
-
-function saveState(state) {
-  if (state.logs && state.logs.length > LOG_LIMIT) state.logs.length = LOG_LIMIT;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-/* ---------- 互斥锁：保证「校验 + 写入」不被并发打断 ---------- */
-function acquireLock() {
-  const now = Date.now();
-  let lock = null;
-  try { lock = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); } catch (e) {}
-  if (lock && now - lock.t < LOCK_TTL) {
-    return { ok: false, msg: '系统正在处理其他请求，请稍后重试' };
-  }
-  localStorage.setItem(LOCK_KEY, JSON.stringify({
-    t: now, token: Math.random().toString(36).slice(2)
-  }));
-  return { ok: true };
-}
-function releaseLock() { localStorage.removeItem(LOCK_KEY); }
-
-/* =========================================================
- *  3. 核心业务：原子性认领 / 撤销 / 记录增删改
- * ========================================================= */
-
-/**
- * 批量认领（原子性校验）
- * 规则：逐条重新校验记录状态必须为「未认领」，校验通过才写入；
- *      任意一条失败不影响其他条，整体结果逐条返回。
- */
-function performClaim(ids, employee) {
-  const lock = acquireLock();
-  if (!lock.ok) return lock;
-
-  try {
-    const state = loadState();        // 锁内重新读取，拿到最新数据
-    const now = new Date();
-    const results = [];
-
-    ids.forEach(id => {
-      const rec = state.records.find(r => r.id === id);
-
-      if (!rec) {
-        results.push({ id, ok: false, msg: '记录不存在' });
-        return;
+  function matchHeaderField(cell) {
+    var c = String(cell).toLowerCase().replace(/[\s()（）\[\]【】:：*\/]/g, '');
+    if (!c) return null;
+    for (var i = 0; i < HEADER_MAP.length; i++) {
+      var item = HEADER_MAP[i];
+      for (var j = 0; j < item.keys.length; j++) {
+        if (c.indexOf(item.keys[j]) !== -1) return item.field;
       }
-      // ★ 原子性校验：状态必须为「未认领」
-      if (rec.status !== 'unclaimed') {
-        results.push({ id, ok: false, msg: '该记录已被认领', company: rec.company });
-        return;
+    }
+    return null;
+  }
+
+  function findHeader(rows) {
+    var limit = Math.min(rows.length, 5);
+    for (var i = 0; i < limit; i++) {
+      var map = {}, hits = 0;
+      for (var j = 0; j < rows[i].length; j++) {
+        var f = matchHeaderField(rows[i][j]);
+        if (f && !(f in map)) { map[f] = j; hits++; }
       }
-
-      // 校验通过 → 置为已认领，绑定认领人与时间
-      rec.status    = 'claimed';
-      rec.claimedBy = {
-        name:  employee.name,
-        empNo: employee.empNo,
-        phone: employee.phone || ''
-      };
-      rec.claimTime = now.toISOString();
-      rec.claimNo   = uid('CL');
-
-      state.logs.unshift({
-        id: uid('LOG'), type: 'claim',
-        recordId: id, company: rec.company, amount: rec.amount, bank: rec.bank,
-        operator: employee.name, empNo: employee.empNo,
-        time: now.toISOString()
-      });
-
-      results.push({ id, ok: true, company: rec.company, amount: rec.amount });
-    });
-
-    saveState(state);
-    return { ok: true, results };
-  } finally {
-    releaseLock();
-  }
-}
-
-/** 异常撤销：已认领 → 未认领 */
-function revokeClaim(id, reason) {
-  const lock = acquireLock();
-  if (!lock.ok) return lock;
-
-  try {
-    const state = loadState();
-    const rec = state.records.find(r => r.id === id);
-
-    if (!rec) return { ok: false, msg: '记录不存在' };
-    if (rec.status !== 'claimed') {
-      return { ok: false, msg: '该记录当前不是「已认领」状态，无法撤销' };
+      if (hits >= 2) return { index: i, map: map };
     }
-
-    const prev = { ...rec.claimedBy };
-
-    rec.status    = 'unclaimed';
-    rec.claimedBy = null;
-    rec.claimTime = null;
-    rec.claimNo   = null;
-    rec.revokeCount = (rec.revokeCount || 0) + 1;
-
-    state.logs.unshift({
-      id: uid('LOG'), type: 'revoke',
-      recordId: id, company: rec.company, amount: rec.amount, bank: rec.bank,
-      operator: '管理员', target: prev, note: reason,
-      time: new Date().toISOString()
-    });
-
-    saveState(state);
-    return { ok: true };
-  } finally {
-    releaseLock();
+    return null;
   }
-}
 
-/** 新增收款记录 */
-function addRecord(data) {
-  const lock = acquireLock();
-  if (!lock.ok) return lock;
+  /* =========================================================
+     四、生成一条记录
+     金额 = 数量 × 单价（自动计算，不再取原始金额列）
+     ========================================================= */
 
-  try {
-    const state = loadState();
-    if (state.records.some(r => r.id === data.id)) {
-      return { ok: false, msg: '记录编号「' + data.id + '」已存在' };
-    }
-    state.records.unshift({
-      id: data.id,
-      amount: data.amount,
-      company: data.company,
-      bank: data.bank,
-      status: 'unclaimed',
-      claimedBy: null,
-      claimTime: null,
-      claimNo: null,
-      revokeCount: 0
-    });
+  function buildRecord(nameRaw, modelRaw, qtyRaw, priceRaw, taxRaw, defaultTax) {
+    var name = clean(nameRaw);
+    var model = clean(modelRaw);
+    var qty = toNumber(qtyRaw);
+    var price = toNumber(priceRaw);
 
-    state.logs.unshift({
-      id: uid('LOG'), type: 'add',
-      recordId: data.id, company: data.company, amount: data.amount, bank: data.bank,
-      operator: '管理员', time: new Date().toISOString()
-    });
+    // 数量、单价都没有 => 视为表头/无关行，丢弃
+    if (qty === null && price === null) return null;
 
-    saveState(state);
-    return { ok: true };
-  } finally {
-    releaseLock();
-  }
-}
+    // 金额自动计算：数量 × 单价（二者缺一则金额为空）
+    var amount = (qty !== null && price !== null) ? round2(qty * price) : null;
 
-/** 修改收款记录（已认领记录修改时保留认领信息） */
-function updateRecord(oldId, data) {
-  const lock = acquireLock();
-  if (!lock.ok) return lock;
+    var tax = toTax(taxRaw, defaultTax);
 
-  try {
-    const state = loadState();
-    const rec = state.records.find(r => r.id === oldId);
-    if (!rec) return { ok: false, msg: '记录不存在' };
-
-    if (data.id !== oldId && state.records.some(r => r.id === data.id)) {
-      return { ok: false, msg: '记录编号「' + data.id + '」已被其他记录占用' };
-    }
-
-    rec.id      = data.id;
-    rec.amount  = data.amount;
-    rec.company = data.company;
-    rec.bank    = data.bank;
-
-    state.logs.unshift({
-      id: uid('LOG'), type: 'edit',
-      recordId: data.id, company: data.company, amount: data.amount, bank: data.bank,
-      operator: '管理员', time: new Date().toISOString()
-    });
-
-    saveState(state);
-    return { ok: true };
-  } finally {
-    releaseLock();
-  }
-}
-
-/** 删除收款记录 */
-function deleteRecord(id) {
-  const lock = acquireLock();
-  if (!lock.ok) return lock;
-
-  try {
-    const state = loadState();
-    const idx = state.records.findIndex(r => r.id === id);
-    if (idx === -1) return { ok: false, msg: '记录不存在' };
-
-    const rec = state.records[idx];
-    state.records.splice(idx, 1);
-
-    state.logs.unshift({
-      id: uid('LOG'), type: 'del',
-      recordId: rec.id, company: rec.company, amount: rec.amount, bank: rec.bank,
-      operator: '管理员', time: new Date().toISOString()
-    });
-
-    saveState(state);
-    return { ok: true, wasClaimed: rec.status === 'claimed' };
-  } finally {
-    releaseLock();
-  }
-}
-
-/* =========================================================
- *  4. 员工身份
- * ========================================================= */
-function loadEmployee() {
-  try {
-    return JSON.parse(localStorage.getItem(EMP_KEY) || 'null')
-      || { name: '', empNo: '', phone: '' };
-  } catch (e) { return { name: '', empNo: '', phone: '' }; }
-}
-function saveEmployee(e) { localStorage.setItem(EMP_KEY, JSON.stringify(e)); }
-
-/* =========================================================
- *  5. Toast / Modal
- * ========================================================= */
-function toast(msg, type = 'info') {
-  const el = document.createElement('div');
-  el.className = 'toast ' + type;
-  el.textContent = msg;
-  document.getElementById('toastWrap').appendChild(el);
-  setTimeout(() => {
-    el.classList.add('out');
-    setTimeout(() => el.remove(), 320);
-  }, 3000);
-}
-
-/**
- * 通用弹窗
- * @param {string}  title
- * @param {string}  html
- * @param {object}  opt  { okText, requireNote, notePlaceholder }
- * @returns {Promise<{ok:boolean, note:string, values:object}>}
- */
-function showModal(title, html, opt = {}) {
-  return new Promise(resolve => {
-    const mask    = document.getElementById('modalMask');
-    const body    = document.getElementById('modalBody');
-    const okBtn   = document.getElementById('modalOk');
-    const cancel  = document.getElementById('modalCancel');
-
-    document.getElementById('modalTitle').textContent = title;
-    body.innerHTML = html + (opt.requireNote
-      ? `<textarea id="modalNote" class="modal-note" placeholder="${esc(opt.notePlaceholder || '')}"></textarea>`
-      : '');
-    okBtn.textContent = opt.okText || '确定';
-    mask.classList.remove('hidden');
-
-    const finish = ok => {
-      const noteEl = document.getElementById('modalNote');
-      const values = {};
-      body.querySelectorAll('[name]').forEach(el => { values[el.name] = el.value; });
-      mask.classList.add('hidden');
-      okBtn.onclick = null;
-      cancel.onclick = null;
-      mask.onclick = null;
-      resolve({ ok, note: noteEl ? noteEl.value.trim() : '', values });
+    return {
+      name: name,
+      model: model,
+      qty: qty,
+      price: price,
+      amount: amount,
+      taxText: String(tax)
     };
-
-    okBtn.onclick = () => finish(true);
-    cancel.onclick = () => finish(false);
-    mask.onclick = e => { if (e.target === mask) finish(false); };
-  });
-}
-
-/* =========================================================
- *  6. 状态
- * ========================================================= */
-const selected = new Set();                         // 员工端已勾选的记录 ID
-let adminAuthed = sessionStorage.getItem('claim_admin_auth') === '1';
-
-/* =========================================================
- *  7. 员工端渲染
- * ========================================================= */
-function renderIdentityStatus() {
-  const emp = loadEmployee();
-  const box = document.getElementById('identityStatus');
-  if (emp.name && emp.empNo) {
-    box.innerHTML = `<div class="verified">✓ 身份已核验：${esc(emp.name)}（工号 ${esc(emp.empNo)}）</div>`;
-  } else {
-    box.innerHTML = '';
   }
-}
 
-function updateSelSummary() {
-  const state = loadState();
-  const picked = state.records.filter(r => selected.has(r.id) && r.status === 'unclaimed');
-  const total = picked.reduce((s, r) => s + r.amount, 0);
-  document.getElementById('selCount').textContent = picked.length;
-  document.getElementById('selAmount').textContent = fmtMoney(total);
-}
-
-function renderEmployeeTable() {
-  const state = loadState();
-  const q = (document.getElementById('searchEmp').value || '').trim().toLowerCase();
-  const hideClaimed = document.getElementById('hideClaimed').checked;
-  const tbody = document.getElementById('empTbody');
-
-  // 清理已失效的选择（已被认领 / 已被删除）
-  const validIds = new Set(
-    state.records.filter(r => r.status === 'unclaimed').map(r => r.id)
-  );
-  [...selected].forEach(id => { if (!validIds.has(id)) selected.delete(id); });
-
-  const list = state.records.filter(r => {
-    if (hideClaimed && r.status === 'claimed') return false;
-    if (q) {
-      const hay = `${r.company} ${r.id} ${r.amount} ${r.bank}`.toLowerCase();
-      if (!hay.includes(q)) return false;
+  /** 没有表头时的兜底：文本列 → 名称/型号；数字列 → 数量/单价（忽略第三数字列） */
+  function heuristicRecord(cells, defaultTax) {
+    var nums = [], texts = [];
+    for (var i = 0; i < cells.length; i++) {
+      var s = String(cells[i]).trim();
+      if (!s) continue;
+      if (looksNumeric(s)) nums.push(toNumber(s));
+      else texts.push(s);
     }
-    return true;
-  });
+    if (!nums.length) return null;
 
-  if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">暂无可显示的收款记录</td></tr>`;
-  } else {
-    tbody.innerHTML = list.map(r => {
-      const claimed = r.status === 'claimed';
-      return `
-        <tr class="${claimed ? 'row-disabled' : ''}">
-          <td class="col-check">
-            <input type="checkbox" data-id="${esc(r.id)}"
-                   ${claimed ? 'disabled' : ''} ${selected.has(r.id) ? 'checked' : ''}>
-          </td>
-          <td class="mono">${esc(r.id)}</td>
-          <td class="amount">${fmtMoney(r.amount)}</td>
-          <td>${esc(r.company)}</td>
-          <td>${bankTag(r.bank)}</td>
-          <td>${claimed
-                ? '<span class="badge claimed">已认领</span>'
-                : '<span class="badge unclaimed">未认领</span>'}</td>
-        </tr>`;
-    }).join('');
+    return buildRecord(
+      texts[0] || '',
+      texts[1] || '',
+      nums[0],
+      nums.length > 1 ? nums[1] : null,
+      '',
+      defaultTax
+    );
   }
 
-  // 全选框状态
-  const boxes = [...tbody.querySelectorAll('input[type=checkbox][data-id]:not(:disabled)')];
-  const checkAll = document.getElementById('checkAll');
-  checkAll.checked = boxes.length > 0 && boxes.every(b => b.checked);
-  checkAll.disabled = boxes.length === 0;
+  function isBlankRow(r) {
+    for (var i = 0; i < r.length; i++) if (String(r[i]).trim() !== '') return false;
+    return true;
+  }
 
-  updateSelSummary();
-}
+  /* =========================================================
+     五、主解析流程
+     ========================================================= */
 
-/* ---------- 员工端事件 ---------- */
-document.getElementById('empTbody').addEventListener('change', e => {
-  const cb = e.target.closest('input[type=checkbox][data-id]');
-  if (!cb) return;
-  if (cb.checked) selected.add(cb.dataset.id);
-  else selected.delete(cb.dataset.id);
+  function parseText(text, defaultTax) {
+    var raw = toMatrix(text);
+    if (!raw.length) return [];
 
-  const boxes = [...document.querySelectorAll('#empTbody input[type=checkbox][data-id]:not(:disabled)')];
-  document.getElementById('checkAll').checked = boxes.length > 0 && boxes.every(b => b.checked);
-  updateSelSummary();
-});
+    var maxCols = 0;
+    raw.forEach(function (r) { if (r.length > maxCols) maxCols = r.length; });
 
-document.getElementById('checkAll').addEventListener('change', e => {
-  const on = e.target.checked;
-  document.querySelectorAll('#empTbody input[type=checkbox][data-id]:not(:disabled)')
-    .forEach(cb => {
-      cb.checked = on;
-      if (on) selected.add(cb.dataset.id);
-      else selected.delete(cb.dataset.id);
+    var rows = raw.map(function (r) {
+      var a = r.slice();
+      while (a.length < maxCols) a.push('');
+      return a;
     });
-  updateSelSummary();
-});
 
-document.getElementById('searchEmp').addEventListener('input', renderEmployeeTable);
-document.getElementById('hideClaimed').addEventListener('change', renderEmployeeTable);
+    var hdr = findHeader(rows);
+    var out = [];
 
-document.getElementById('btnClaim').addEventListener('click', async () => {
-  const name  = document.getElementById('empName').value.trim();
-  const empNo = document.getElementById('empNo').value.trim();
-  const phone = document.getElementById('empPhone').value.trim();
-
-  // ① 身份核验
-  if (!name || !empNo) {
-    toast('请先填写姓名和工号，完成身份核验', 'error');
-    return;
-  }
-  if (!selected.size) {
-    toast('请至少选择一条待认领记录', 'error');
-    return;
-  }
-
-  const state = loadState();
-  const picked = state.records.filter(r => selected.has(r.id) && r.status === 'unclaimed');
-  if (!picked.length) {
-    toast('所选记录已被认领，请刷新后重试', 'error');
-    renderAll();
-    return;
-  }
-
-  const total = picked.reduce((s, r) => s + r.amount, 0);
-
-  // ② 二次确认
-  const res = await showModal('确认认领', `
-    <div class="confirm-box">
-      <p>认领人：<b>${esc(name)}</b>（工号 ${esc(empNo)}）</p>
-      <p>认领条数：<b>${picked.length}</b> 条，合计金额 <b class="amount">${fmtMoney(total)}</b></p>
-      <ul class="mini-list">
-        ${picked.map(r => `<li>${esc(r.company)} — ${fmtMoney(r.amount)} — ${esc(r.bank)}</li>`).join('')}
-      </ul>
-      <p class="hint">提交后系统将逐条执行原子性校验：若某条记录已被他人认领，
-      该条自动跳过，其余记录正常认领。</p>
-    </div>`, { okText: '确认认领' });
-  if (!res.ok) return;
-
-  saveEmployee({ name, empNo, phone });
-
-  // ③ 原子性认领
-  const out = performClaim([...selected], { name, empNo, phone });
-  if (!out.ok) { toast(out.msg, 'error'); return; }
-
-  const okList   = out.results.filter(r => r.ok);
-  const failList = out.results.filter(r => !r.ok);
-
-  selected.clear();
-  renderAll();
-  renderIdentityStatus();
-
-  if (okList.length && !failList.length) {
-    toast(`认领成功 ${okList.length} 条记录`, 'success');
-  } else if (okList.length && failList.length) {
-    toast(`成功 ${okList.length} 条，失败 ${failList.length} 条（已被他人认领）`, 'warn');
-  } else {
-    toast('认领失败：所选记录均已被他人认领', 'error');
-  }
-});
-
-/* =========================================================
- *  8. 管理端渲染
- * ========================================================= */
-function renderAdmin() {
-  const loginBox = document.getElementById('adminLogin');
-  const panel    = document.getElementById('adminPanel');
-
-  if (!adminAuthed) {
-    loginBox.classList.remove('hidden');
-    panel.classList.add('hidden');
-    return;
-  }
-  loginBox.classList.add('hidden');
-  panel.classList.remove('hidden');
-
-  const state = loadState();
-  const q      = (document.getElementById('adminSearch').value || '').trim().toLowerCase();
-  const filter = document.getElementById('adminFilter').value;
-
-  /* ---- 统计 ---- */
-  const claimedList   = state.records.filter(r => r.status === 'claimed');
-  const claimedAmount = claimedList.reduce((s, r) => s + r.amount, 0);
-  const totalAmount   = state.records.reduce((s, r) => s + r.amount, 0);
-
-  document.getElementById('stats').innerHTML = `
-    <div class="stat"><span>收款记录总数</span><b>${state.records.length}</b></div>
-    <div class="stat"><span>已认领</span><b class="ok">${claimedList.length}</b></div>
-    <div class="stat"><span>未认领</span><b class="warn">${state.records.length - claimedList.length}</b></div>
-    <div class="stat"><span>已认领金额</span><b class="ok">${fmtMoney(claimedAmount)}</b></div>
-    <div class="stat"><span>收款总金额</span><b>${fmtMoney(totalAmount)}</b></div>
-  `;
-
-  /* ---- 明细表 ---- */
-  const list = state.records.filter(r => {
-    if (filter !== 'all' && r.status !== filter) return false;
-    if (q) {
-      const hay = `${r.company} ${r.id} ${r.amount} ${r.bank} ` +
-        `${r.claimedBy ? r.claimedBy.name : ''} ` +
-        `${r.claimedBy ? r.claimedBy.empNo : ''}`;
-      if (!hay.toLowerCase().includes(q)) return false;
+    if (hdr) {
+      var map = hdr.map;
+      for (var i = hdr.index + 1; i < rows.length; i++) {
+        var r = rows[i];
+        if (isBlankRow(r)) continue;
+        var get = function (f) { return map[f] !== undefined ? r[map[f]] : ''; };
+        var rec = buildRecord(get('name'), get('model'), get('qty'),
+                              get('price'), get('tax'), defaultTax);
+        if (rec) out.push(rec);
+      }
+    } else {
+      for (var k = 0; k < rows.length; k++) {
+        if (isBlankRow(rows[k])) continue;
+        var rec2 = heuristicRecord(rows[k], defaultTax);
+        if (rec2) out.push(rec2);
+      }
     }
-    return true;
-  });
-
-  document.getElementById('adminTbody').innerHTML = list.length
-    ? list.map((r, i) => `
-        <tr>
-          <td class="muted">${i + 1}</td>
-          <td class="mono">${esc(r.id)}</td>
-          <td class="amount">${fmtMoney(r.amount)}</td>
-          <td>${esc(r.company)}</td>
-          <td>${bankTag(r.bank)}</td>
-          <td>${r.status === 'claimed'
-                ? '<span class="badge claimed">已认领</span>'
-                : '<span class="badge unclaimed">未认领</span>'}</td>
-          <td>${r.claimedBy ? esc(r.claimedBy.name) : '—'}</td>
-          <td class="mono">${r.claimedBy ? esc(r.claimedBy.empNo) : '—'}</td>
-          <td class="muted">${r.claimTime ? fmtTime(r.claimTime) : '—'}</td>
-          <td class="col-ops">
-            <button class="btn tiny" data-edit="${esc(r.id)}">编辑</button>
-            <button class="btn tiny danger" data-del="${esc(r.id)}">删除</button>
-            ${r.status === 'claimed'
-              ? `<button class="btn tiny danger" data-revoke="${esc(r.id)}">撤销</button>`
-              : ''}
-          </td>
-        </tr>`).join('')
-    : `<tr><td colspan="10" class="empty">没有符合条件的记录</td></tr>`;
-
-  /* ---- 日志 ---- */
-  const logList = document.getElementById('logList');
-  logList.innerHTML = state.logs.length
-    ? state.logs.slice(0, 60).map(l => `
-        <li class="log-item ${l.type}">
-          <span class="log-time">${fmtTime(l.time)}</span>
-          <span class="log-tag">${({
-            claim: '认领', revoke: '撤销', add: '新增', edit: '修改', del: '删除'
-          })[l.type] || l.type}</span>
-          <span class="log-text">${renderLogText(l)}</span>
-        </li>`).join('')
-    : '<li class="empty">暂无操作日志</li>';
-}
-
-function renderLogText(l) {
-  const base = `「${esc(l.company)}」${fmtMoney(l.amount)}（${esc(l.bank || '—')}）`;
-  switch (l.type) {
-    case 'claim':
-      return `${esc(l.operator)}（${esc(l.empNo || '')}）认领了${base}`;
-    case 'revoke':
-      return `管理员撤销了${base}的认领，原认领人：${esc(l.target ? l.target.name : '—')}，原因：${esc(l.note || '—')}`;
-    case 'add':
-      return `管理员新增了收款记录${base}`;
-    case 'edit':
-      return `管理员修改了收款记录${base}`;
-    case 'del':
-      return `管理员删除了收款记录${base}`;
-    default:
-      return base;
+    return out;
   }
-}
 
-/* ---------- 管理端事件 ---------- */
-document.getElementById('btnLogin').addEventListener('click', () => {
-  const pwd = document.getElementById('adminPwd').value;
-  if (pwd !== ADMIN_PASSWORD) {
-    toast('管理员密码错误', 'error');
-    return;
-  }
-  adminAuthed = true;
-  sessionStorage.setItem('claim_admin_auth', '1');
-  document.getElementById('adminPwd').value = '';
-  renderAll();
-  toast('登录成功', 'success');
-});
-document.getElementById('adminPwd').addEventListener('keydown', e => {
-  if (e.key === 'Enter') document.getElementById('btnLogin').click();
-});
+  /* =========================================================
+     六、表格渲染 & 交互
+     ========================================================= */
 
-document.getElementById('btnLogout').addEventListener('click', () => {
-  adminAuthed = false;
-  sessionStorage.removeItem('claim_admin_auth');
-  renderAll();
-});
+  var records = [];
+  var tbody = $('#result tbody');
 
-document.getElementById('adminSearch').addEventListener('input', renderAdmin);
-document.getElementById('adminFilter').addEventListener('change', renderAdmin);
-
-/* ---------- 记录表单（新增 / 编辑 共用） ---------- */
-function recordFormHTML(rec) {
-  const isEdit = !!rec;
-  const bankOptions = BANK_NAMES.map(b =>
-    `<option value="${esc(b)}" ${isEdit && rec.bank === b ? 'selected' : ''}>${esc(b)}</option>`
-  ).join('');
-
-  return `
-    <div class="form-grid" style="margin-top:0">
-      <label class="field"><span>记录编号 <i>*</i></span>
-        <input name="id" type="text" value="${isEdit ? esc(rec.id) : ''}" placeholder="如 RC20260601011">
-      </label>
-      <label class="field"><span>收款金额 <i>*</i></span>
-        <input name="amount" type="number" step="0.01" min="0.01"
-               value="${isEdit ? rec.amount : ''}" placeholder="0.00">
-      </label>
-      <label class="field"><span>对应公司名称 <i>*</i></span>
-        <input name="company" type="text" value="${isEdit ? esc(rec.company) : ''}" placeholder="请输入公司全称">
-      </label>
-      <label class="field"><span>打款账户名称 <i>*</i></span>
-        <select name="bank">${bankOptions}</select>
-      </label>
-    </div>
-    ${isEdit && rec.status === 'claimed'
-      ? '<p class="hint">⚠ 该记录当前为「已认领」状态，修改金额 / 公司 / 账户不会清除认领人与认领时间。</p>'
-      : ''}
-  `;
-}
-
-/** 校验表单值并返回标准数据 */
-function validateRecordValues(values, excludeId) {
-  const id      = (values.id || '').trim();
-  const company = (values.company || '').trim();
-  const bank    = values.bank;
-  const amount  = Number(values.amount);
-
-  if (!id)            return { ok: false, msg: '记录编号不能为空' };
-  if (!company)       return { ok: false, msg: '对应公司名称不能为空' };
-  if (!BANK_NAMES.includes(bank)) return { ok: false, msg: '请选择有效的打款账户' };
-  if (!isFinite(amount) || amount <= 0) return { ok: false, msg: '收款金额必须为大于 0 的数字' };
-
-  const state = loadState();
-  const dup = state.records.some(r => r.id === id && r.id !== excludeId);
-  if (dup) return { ok: false, msg: `记录编号「${id}」已存在，请更换` };
-
-  return { ok: true, data: { id, amount, company, bank } };
-}
-
-/* 新增记录 */
-document.getElementById('btnAdd').addEventListener('click', async () => {
-  const res = await showModal('新增收款记录', recordFormHTML(null), { okText: '保存并新增' });
-  if (!res.ok) return;
-
-  const v = validateRecordValues(res.values, null);
-  if (!v.ok) { toast(v.msg, 'error'); return; }
-
-  const out = addRecord(v.data);
-  if (!out.ok) { toast(out.msg, 'error'); return; }
-
-  toast('新增收款记录成功', 'success');
-  renderAll();
-});
-
-/* 编辑 / 删除 / 撤销（事件委托） */
-document.getElementById('adminTbody').addEventListener('click', async e => {
-  /* --- 撤销 --- */
-  const rvBtn = e.target.closest('[data-revoke]');
-  if (rvBtn) {
-    const id = rvBtn.dataset.revoke;
-    const state = loadState();
-    const rec = state.records.find(r => r.id === id);
-
-    if (!rec || rec.status !== 'claimed') {
-      toast('该记录当前不可撤销，请刷新后重试', 'error');
-      renderAll();
+  function renderTable() {
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无数据，请粘贴文字后点击「解析并生成表格」</td></tr>';
+      updateTotals();
       return;
     }
-
-    const res = await showModal('异常撤销确认', `
-      <p>即将撤销以下记录的认领状态：</p>
-      <ul class="mini-list">
-        <li>${esc(rec.company)} — <b>${fmtMoney(rec.amount)}</b> — ${esc(rec.bank)}</li>
-      </ul>
-      <p>当前认领人：<b>${esc(rec.claimedBy.name)}</b>（工号 ${esc(rec.claimedBy.empNo)}）</p>
-      <p>认领时间：${fmtTime(rec.claimTime)}</p>
-      <p class="hint">撤销后该记录将恢复为「未认领」状态，可被员工重新认领。</p>
-    `, { okText: '确认撤销', requireNote: true,
-         notePlaceholder: '请填写撤销原因（必填），如：员工误认领 / 客户退款等' });
-
-    if (!res.ok) return;
-    if (!res.note) { toast('请填写撤销原因', 'error'); return; }
-
-    const out = revokeClaim(id, res.note);
-    if (!out.ok) { toast(out.msg, 'error'); renderAll(); return; }
-
-    toast('已撤销该记录的认领，恢复为未认领状态', 'success');
-    renderAll();
-    return;
+    var html = '';
+    for (var i = 0; i < records.length; i++) {
+      var r = records[i];
+      html += '<tr>' +
+        '<td class="idx">' + (i + 1) + '</td>' +
+        '<td><input data-f="name" value="' + escapeAttr(r.name) + '"></td>' +
+        '<td><input data-f="model" value="' + escapeAttr(r.model) + '"></td>' +
+        '<td><input data-f="qty" class="num" value="' + escapeAttr(fmtNum(r.qty)) + '"></td>' +
+        '<td><input data-f="price" class="num" value="' + escapeAttr(fmtNum(r.price)) + '"></td>' +
+        '<td><input data-f="amount" class="num" value="' + escapeAttr(fmtNum(r.amount)) + '" readonly tabindex="-1"></td>' +
+        '<td><input data-f="tax" class="num" value="' + escapeAttr(r.taxText) + '"></td>' +
+        '<td class="op"><button class="del">删除</button></td>' +
+      '</tr>';
+    }
+    tbody.innerHTML = html;
+    updateTotals();
   }
 
-  /* --- 编辑 --- */
-  const edBtn = e.target.closest('[data-edit]');
-  if (edBtn) {
-    const id = edBtn.dataset.edit;
-    const state = loadState();
-    const rec = state.records.find(r => r.id === id);
-    if (!rec) { toast('记录不存在，请刷新', 'error'); renderAll(); return; }
-
-    const res = await showModal('修改收款记录', recordFormHTML(rec), { okText: '保存修改' });
-    if (!res.ok) return;
-
-    const v = validateRecordValues(res.values, id);
-    if (!v.ok) { toast(v.msg, 'error'); return; }
-
-    const out = updateRecord(id, v.data);
-    if (!out.ok) { toast(out.msg, 'error'); return; }
-
-    selected.clear();   // 编号可能变化，清空员工端勾选，避免脏数据
-    toast('修改成功', 'success');
-    renderAll();
-    return;
+  /** 更新合计行与状态栏 */
+  function updateTotals() {
+    var totalQty = 0, totalAmount = 0;
+    for (var i = 0; i < records.length; i++) {
+      var r = records[i];
+      if (typeof r.qty === 'number') totalQty += r.qty;
+      if (typeof r.amount === 'number') totalAmount += r.amount;
+    }
+    totalQty = Math.round(totalQty * 1e6) / 1e6;
+    $('#totalQty').textContent = totalQty;
+    $('#totalAmount').textContent = totalAmount.toFixed(2);
+    $('#status').textContent = '共 ' + records.length + ' 条　|　总金额：' + totalAmount.toFixed(2);
   }
 
-  /* --- 删除 --- */
-  const delBtn = e.target.closest('[data-del]');
-  if (delBtn) {
-    const id = delBtn.dataset.del;
-    const state = loadState();
-    const rec = state.records.find(r => r.id === id);
-    if (!rec) { toast('记录不存在，请刷新', 'error'); renderAll(); return; }
+  // 编辑单元格
+  tbody.addEventListener('input', function (e) {
+    var inp = e.target;
+    if (!inp.matches || !inp.matches('input[data-f]')) return;
 
-    const isClaimed = rec.status === 'claimed';
-    const res = await showModal('删除收款记录', `
-      <p>确认删除以下收款记录？</p>
-      <ul class="mini-list">
-        <li>${esc(rec.id)} — ${esc(rec.company)} — <b>${fmtMoney(rec.amount)}</b> — ${esc(rec.bank)}</li>
-      </ul>
-      ${isClaimed
-        ? `<p style="color:#dc2626">⚠ 该记录已被 <b>${esc(rec.claimedBy.name)}</b>（工号 ${esc(rec.claimedBy.empNo)}）认领，删除后认领信息将一并丢失，且不可恢复。</p>`
-        : '<p class="hint">删除后该记录不可恢复。</p>'}
-    `, { okText: '确认删除' });
+    var tr = inp.closest('tr');
+    var idx = Array.prototype.indexOf.call(tbody.children, tr);
+    var rec = records[idx];
+    if (!rec) return;
 
-    if (!res.ok) return;
+    var f = inp.dataset.f;
 
-    const out = deleteRecord(id);
-    if (!out.ok) { toast(out.msg, 'error'); renderAll(); return; }
-
-    selected.delete(id);
-    toast('已删除该收款记录', 'success');
-    renderAll();
-  }
-});
-
-/* =========================================================
- *  9. Excel 导出
- *  列：序号、交易金额、对应公司名称、打款账户名称、认领状态、认领人、认领时间
- * ========================================================= */
-document.getElementById('btnExport').addEventListener('click', () => {
-  const state = loadState();
-  if (!state.records.length) { toast('暂无可导出的数据', 'error'); return; }
-
-  const headers = ['序号', '交易金额', '对应公司名称', '打款账户名称',
-                   '认领状态', '认领人', '认领时间'];
-
-  const rows = state.records.map((r, i) => [
-    i + 1,
-    Number(r.amount).toFixed(2),
-    r.company,
-    r.bank,
-    r.status === 'claimed' ? '已认领' : '未认领',
-    r.claimedBy ? r.claimedBy.name : '',
-    r.claimTime ? fmtTime(r.claimTime) : ''
-  ]);
-
-  const th = headers
-    .map(h => `<th style="background:#DCE6F1;font-weight:bold;border:1px solid #999;">${esc(h)}</th>`)
-    .join('');
-
-  const trs = rows.map(row =>
-    '<tr>' + row.map((v, idx) => {
-      const text = String(v ?? '')
-        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      // 金额列（第 2 列，索引 1）保留两位小数格式，其余按文本，避免科学计数
-      const style = idx === 1
-        ? 'border:1px solid #ccc;mso-number-format:"0\\.00";'
-        : 'border:1px solid #ccc;mso-number-format:"\\@";';
-      return `<td style="${style}">${text}</td>`;
-    }).join('') + '</tr>'
-  ).join('');
-
-  const html =
-    `<html xmlns:o="urn:schemas-microsoft-com:office:office" ` +
-    `xmlns:x="urn:schemas-microsoft-com:office:excel">` +
-    `<head><meta charset="utf-8">` +
-    `<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>` +
-    `<x:Name>收款认领明细</x:Name><x:WorksheetOptions><x:DisplayGridlines/>` +
-    `</x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->` +
-    `</head><body><table border="1" cellspacing="0" cellpadding="4">` +
-    `<tr>${th}</tr>${trs}</table></body></html>`;
-
-  const blob = new Blob(['\ufeff' + html], {
-    type: 'application/vnd.ms-excel;charset=utf-8'
+    if (f === 'qty' || f === 'price') {
+      rec[f] = toNumber(inp.value);
+      // 金额 = 数量 × 单价，自动重算
+      var v = (rec.qty !== null && rec.price !== null) ? round2(rec.qty * rec.price) : null;
+      rec.amount = v;
+      var amtInput = tr.querySelector('input[data-f="amount"]');
+      if (amtInput) amtInput.value = fmtNum(v);
+      updateTotals();
+    } else if (f === 'tax') {
+      rec.taxText = inp.value;
+    } else {
+      rec[f] = inp.value;
+    }
   });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `收款认领明细_${new Date().toISOString().slice(0, 10)}.xls`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
 
-  toast('Excel 导出成功', 'success');
-});
-
-/* =========================================================
- *  10. 视图切换 / 初始化
- * ========================================================= */
-function renderAll() {
-  renderEmployeeTable();
-  renderIdentityStatus();
-  renderAdmin();
-}
-
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById('view-' + tab.dataset.view).classList.add('active');
-    renderAll();
+  // 删除行
+  tbody.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.del') : null;
+    if (!btn) return;
+    var tr = btn.closest('tr');
+    var idx = Array.prototype.indexOf.call(tbody.children, tr);
+    if (idx >= 0) {
+      records.splice(idx, 1);
+      renderTable();
+    }
   });
-});
 
-/* 多标签页 / 多窗口数据同步 */
-window.addEventListener('storage', e => {
-  if (e.key === STORAGE_KEY) renderAll();
-});
+  /* =========================================================
+     七、导出 Excel（含合计行）
+     ========================================================= */
 
-/* 启动 */
-(function init() {
-  const emp = loadEmployee();
-  document.getElementById('empName').value  = emp.name  || '';
-  document.getElementById('empNo').value    = emp.empNo || '';
-  document.getElementById('empPhone').value = emp.phone || '';
+  function buildAoa() {
+    var aoa = [['序号', '产品名称', '产品型号', '产品数量', '产品单价', '产品金额', '税率']];
+    var totalQty = 0, totalAmount = 0;
 
-  // 身份输入即时保存 + 状态刷新
-  ['empName', 'empNo', 'empPhone'].forEach(id => {
-    document.getElementById(id).addEventListener('input', () => {
-      saveEmployee({
-        name:  document.getElementById('empName').value.trim(),
-        empNo: document.getElementById('empNo').value.trim(),
-        phone: document.getElementById('empPhone').value.trim()
-      });
-      renderIdentityStatus();
+    for (var i = 0; i < records.length; i++) {
+      var r = records[i];
+      var tax = toTax(r.taxText, 0.13);
+      aoa.push([
+        i + 1,
+        r.name || '',
+        r.model || '',
+        r.qty === null ? '' : r.qty,
+        r.price === null ? '' : r.price,
+        r.amount === null ? '' : r.amount,
+        tax
+      ]);
+      if (typeof r.qty === 'number') totalQty += r.qty;
+      if (typeof r.amount === 'number') totalAmount += r.amount;
+    }
+
+    // 末尾合计行
+    aoa.push([
+      '', '合计', '',
+      Math.round(totalQty * 1e6) / 1e6,
+      '',
+      round2(totalAmount),
+      ''
+    ]);
+
+    return aoa;
+  }
+
+  function setFormat(ws, r, c, z) {
+    var addr = XLSX.utils.encode_cell({ r: r, c: c });
+    if (ws[addr] && ws[addr].t === 'n') ws[addr].z = z;
+  }
+
+  function exportExcel() {
+    if (!records.length) { alert('没有数据可以导出，请先解析表格。'); return; }
+
+    var aoa = buildAoa();
+    var totalRowIndex = aoa.length - 1;
+
+    if (typeof XLSX !== 'undefined' && XLSX.utils) {
+      var ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [
+        { wch: 6 }, { wch: 26 }, { wch: 20 },
+        { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 10 }
+      ];
+      var range = XLSX.utils.decode_range(ws['!ref']);
+      for (var R = 1; R <= range.e.r; R++) {
+        setFormat(ws, R, 3, '0.##');       // 数量
+        setFormat(ws, R, 4, '#,##0.00');   // 单价
+        setFormat(ws, R, 5, '#,##0.00');   // 金额（含合计行）
+        setFormat(ws, R, 6, '0.##%');      // 税率
+      }
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '产品清单');
+      XLSX.writeFile(wb, '产品清单.xlsx');
+    } else {
+      exportAsXls(aoa);   // 离线兜底
+    }
+  }
+
+  function exportAsXls(aoa) {
+    var html = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body><table border="1">';
+    aoa.forEach(function (row) {
+      html += '<tr>' + row.map(function (c) {
+        return '<td>' + escapeAttr(c) + '</td>';
+      }).join('') + '</tr>';
     });
+    html += '</table></body></html>';
+
+    var blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = '产品清单.xls';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  /* =========================================================
+     八、按钮绑定
+     ========================================================= */
+
+  $('#parseBtn').addEventListener('click', function () {
+    var text = $('#input').value;
+    if (!text.trim()) { alert('请先把网页表格的内容粘贴到输入框中。'); return; }
+    var defTax = toTax($('#defaultTax').value, 0.13);
+    records = parseText(text, defTax);
+    renderTable();
   });
 
-  renderAll();
+  $('#exportBtn').addEventListener('click', exportExcel);
+
+  $('#addRowBtn').addEventListener('click', function () {
+    var defTax = toTax($('#defaultTax').value, 0.13);
+    records.push({
+      name: '', model: '', qty: null, price: null, amount: null,
+      taxText: String(defTax)
+    });
+    renderTable();
+  });
+
+  $('#clearBtn').addEventListener('click', function () {
+    $('#input').value = '';
+    records = [];
+    renderTable();
+  });
+
+  $('#sampleBtn').addEventListener('click', function () {
+    $('#input').value =
+      '产品编号\t产品名称\t规格型号\t数量\t单价\t金额\t税率\t备注\n' +
+      'A001\t深沟球轴承\t6204-2RS\t100\t12.5\t1250\t13%\t现货\n' +
+      'A002\t同步带\tHTD-5M-15\t20\t35\t700\t13%\t\n' +
+      'A003\t伺服电机\tMSMF042L1U2M\t2\t3650\t7300\t13%\t含税\n' +
+      'A004\t联轴器\tLK13-508\t6\t268\t1608\t13%\t加急';
+  });
+
+  // Ctrl + Enter 快速解析
+  $('#input').addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      $('#parseBtn').click();
+    }
+  });
+
+  /* 初始化 */
+  renderTable();
+
 })();
 </script>
 </body>
