@@ -49,9 +49,12 @@
   td input.num{text-align:center}
   td input.unit{text-align:center}
   
+  /* 序号列输入框样式 */
+  td.idx{color:var(--muted);width:60px;text-align:center}
+  td.idx input{text-align:center;padding:4px;color:var(--text)}
+  
   td input[readonly]{background:#f3f6fa;color:#334155;cursor:default}
   td input[readonly]:hover{border-color:transparent}
-  td.idx{color:var(--muted);width:46px;text-align:center}
   td.op{width:60px;text-align:center}
   .del{border:none;background:transparent;color:var(--danger);padding:4px 6px;font-size:12px}
   .del:hover{background:#fef2f2;border-radius:5px}
@@ -72,7 +75,7 @@
   <div class="card">
     <h1>粘贴表格文字 → 整理成产品清单 → 导出 Excel</h1>
     <div class="sub">
-      直接从网页表格里全选复制，粘贴到下面即可。自动识别表头，智能提取“名称、型号、单位、数量、含税单价、税率”；
+      直接从网页表格里全选复制，粘贴到下面即可。支持提取原始序号，智能识别“名称、型号、单位、数量、含税单价、税率”；
       <b>含税金额 = 数量 × 含税单价（自动计算）</b>。
     </div>
     <div style="margin-top:12px">
@@ -97,7 +100,7 @@
       <table id="result">
         <thead>
           <tr>
-            <th>#</th>
+            <th>序号</th>
             <th>产品名称</th>
             <th>规格型号</th>
             <th>单位</th>
@@ -209,15 +212,16 @@
     return rows;
   }
 
-  // 表头映射，加入排除项
+  // 表头映射，加入序号识别和排除项
   var HEADER_MAP = [
+    { field: 'seq',    keys: ['序号', '行号', 'no'] },
     { field: 'tax',    keys: ['税率', '税点', 'tax'] },
     { field: 'amount', keys: ['价税合计', '含税金额', '总金额', '金额', '总价', '合计', '小计', '总额', 'amount'], exclude: ['无税', '不含税', '未税', '税额'] },
     { field: 'price',  keys: ['含税单价', '含税价', '单价', '价格', '售价', 'price', 'unitprice'], exclude: ['无税', '不含税', '未税'] },
     { field: 'qty',    keys: ['数量', '件数', '个数', '数目', 'qty', 'quantity'] },
     { field: 'unit',   keys: ['单位', '计量单位', 'unit'] },
     { field: 'model',  keys: ['规格型号', '型号', '规格', 'model', 'spec', '机种'] },
-    { field: 'code',   keys: ['编号', '编码', '料号', '货号', 'code', 'sku', '序号', 'id'] },
+    { field: 'code',   keys: ['编号', '编码', '料号', '货号', 'code', 'sku', 'id'] }, // 移除了'序号'，防冲突
     { field: 'name',   keys: ['产品名称', '商品名称', '物料名称', '货物名称', '品名', '名称', '产品', '商品', '物料', '货物', 'name', '项目'] },
     { field: 'remark', keys: ['备注', '说明', '描述', 'remark', 'note', 'desc'] }
   ];
@@ -260,7 +264,8 @@
   }
 
   // 生成记录
-  function buildRecord(nameRaw, modelRaw, unitRaw, qtyRaw, priceRaw, taxRaw, defaultTax) {
+  function buildRecord(seqRaw, nameRaw, modelRaw, unitRaw, qtyRaw, priceRaw, taxRaw, defaultTax) {
+    var seq = clean(seqRaw);
     var name = clean(nameRaw);
     var model = clean(modelRaw);
     var unit = clean(unitRaw);
@@ -274,6 +279,7 @@
     var tax = toTax(taxRaw, defaultTax);
 
     return {
+      seq: seq,
       name: name,
       model: model,
       unit: unit,
@@ -284,19 +290,30 @@
     };
   }
 
-  // 无表头时的智能提取
+  // 无表头时的智能提取（兼容多种常见 ERP 格式）
   function heuristicRecord(cells, defaultTax) {
-    // 优先匹配常见 ERP 单据结构（13列左右：名称,编号,型号,单位,数量,无税单价,含税单价,无税金额,税率,税额,含税金额,价税合计...）
-    if (cells.length >= 9) {
-      var qtyTest = toNumber(cells[4]);
-      var priceTest = toNumber(cells[6]);
-      if (qtyTest !== null && priceTest !== null) {
+    // 格式 A: 首列带序号的 16 列左右格式
+    if (cells.length >= 10) {
+      var isFormatA = looksNumeric(cells[0]) && !looksNumeric(cells[1]) && cells[1] !== '';
+      if (isFormatA) {
+        // 0: 序号, 1: 名称, 3: 型号, 4: 单位, 5: 数量, 7: 含税单价, 9: 税率
         return buildRecord(
-          cells[0], cells[2], cells[3], qtyTest, priceTest, cells[8], defaultTax
+          cells[0], cells[1], cells[3], cells[4], cells[5], cells[7], cells[9], defaultTax
         );
       }
     }
 
+    // 格式 B: 首列不带序号的 13 列左右格式
+    if (cells.length >= 9) {
+      var isFormatB = !looksNumeric(cells[0]) && cells[0] !== '';
+      if (isFormatB) {
+        // 0: 名称, 2: 型号, 3: 单位, 4: 数量, 6: 含税单价, 8: 税率
+        return buildRecord(
+          null, cells[0], cells[2], cells[3], cells[4], cells[6], cells[8], defaultTax
+        );
+      }
+    }
+    
     // 通用兜底：文本列 → 名称/型号；数字列 → 数量/单价
     var nums = [], texts = [];
     for (var i = 0; i < cells.length; i++) {
@@ -308,6 +325,7 @@
     if (!nums.length) return null;
 
     return buildRecord(
+      null,
       texts[0] || '',
       texts[1] || '',
       '',
@@ -346,7 +364,7 @@
         var r = rows[i];
         if (isBlankRow(r)) continue;
         var get = function (f) { return map[f] !== undefined ? r[map[f]] : ''; };
-        var rec = buildRecord(get('name'), get('model'), get('unit'), get('qty'),
+        var rec = buildRecord(get('seq'), get('name'), get('model'), get('unit'), get('qty'),
                               get('price'), get('tax'), defaultTax);
         if (rec) out.push(rec);
       }
@@ -372,8 +390,10 @@
     var html = '';
     for (var i = 0; i < records.length; i++) {
       var r = records[i];
+      var showSeq = (r.seq !== undefined && r.seq !== null && r.seq !== '') ? r.seq : (i + 1);
+      
       html += '<tr>' +
-        '<td class="idx">' + (i + 1) + '</td>' +
+        '<td class="idx"><input data-f="seq" value="' + escapeAttr(showSeq) + '"></td>' +
         '<td><input data-f="name" value="' + escapeAttr(r.name) + '"></td>' +
         '<td><input data-f="model" value="' + escapeAttr(r.model) + '"></td>' +
         '<td><input data-f="unit" class="unit" value="' + escapeAttr(r.unit) + '"></td>' +
@@ -421,6 +441,8 @@
       updateTotals();
     } else if (f === 'tax') {
       rec.taxText = inp.value;
+    } else if (f === 'seq') {
+      rec.seq = inp.value;
     } else {
       rec[f] = inp.value;
     }
@@ -437,7 +459,7 @@
     }
   });
 
-  // 构建导出数据（含单位列，重新计算合计）
+  // 构建导出数据（包含原始序号）
   function buildAoa() {
     var aoa = [['序号', '产品名称', '规格型号', '单位', '数量', '含税单价', '含税金额', '税率']];
     var totalQty = 0, totalAmount = 0;
@@ -446,7 +468,7 @@
       var r = records[i];
       var tax = toTax(r.taxText, 0.13);
       aoa.push([
-        i + 1,
+        (r.seq !== undefined && r.seq !== null && r.seq !== '') ? r.seq : (i + 1),
         r.name || '',
         r.model || '',
         r.unit || '',
@@ -533,6 +555,7 @@
   $('#addRowBtn').addEventListener('click', function () {
     var defTax = toTax($('#defaultTax').value, 0.13);
     records.push({
+      seq: records.length + 1,
       name: '', model: '', unit: '', qty: null, price: null, amount: null,
       taxText: String(defTax)
     });
@@ -545,9 +568,9 @@
     renderTable();
   });
 
-  // 填充范例（就是你提供的这行数据）
+  // 填充最新范例数据
   $('#sampleBtn').addEventListener('click', function () {
-    $('#input').value = '洛阳信京中央实验台\t040351\tXJ-SYT-063\t台\t1.00\t5,530.97345132743\t6,250\t5,530.97\t13.00%\t719.03\t6,250.00\t6,250.00\t尺寸：3000*1500*800（mm）；台面：12.7mm厚实芯理化板；';
+    $('#input').value = '3\t洛阳信京中央实验台\t040351\tXJ-SYT-063\t台\t1.00\t5,530.97345132743\t6,250\t5,530.97\t13.00%\t719.03\t6,250.00\t6,250.00\t尺寸：3000*1500*800（mm）；台面：12.7mm厚实芯理化板；附加组件：带试剂架，带水槽，带水龙头，带滑轮凳，带插座，带置物架；柜体材质：钢木 含卸货 含上门安装 15538589391 信京\tXX科技有限公司某人QW123-2026110701\tKP202611070001';
   });
 
   $('#input').addEventListener('keydown', function (e) {
