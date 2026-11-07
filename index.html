@@ -32,17 +32,23 @@
   .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:60vh}
   table{border-collapse:collapse;width:100%;min-width:900px;font-size:13px}
   th,td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left}
-  /* 让第4、5、6、7列的表头文字居中 */
-th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
-    text-align: center;
-}
   th{background:#f8fafc;font-weight:600;color:#374151;position:sticky;top:0;z-index:2;white-space:nowrap}
+  
+  /* 第4至8列（单位、数量、含税单价、含税金额、税率）表头居中 */
+  th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7), th:nth-child(8) {
+      text-align: center;
+  }
+  
   tbody tr:hover{background:#fbfdff}
   td input{width:100%;border:1px solid transparent;background:transparent;padding:6px;
            border-radius:5px;font-size:13px;font-family:inherit;color:inherit}
   td input:hover{border-color:var(--line)}
   td input:focus{border-color:var(--primary);background:#fff;outline:none}
+  
+  /* 数字输入框居中 */
   td input.num{text-align:center}
+  td input.unit{text-align:center}
+  
   td input[readonly]{background:#f3f6fa;color:#334155;cursor:default}
   td input[readonly]:hover{border-color:transparent}
   td.idx{color:var(--muted);width:46px;text-align:center}
@@ -52,9 +58,11 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
   .status{font-size:13px;color:var(--muted);margin-left:auto}
   .empty{padding:36px;text-align:center;color:var(--muted);font-size:13px}
   .tip{font-size:12px;color:var(--muted);margin-top:8px}
+  
   /* 合计行 */
   tfoot td{background:#f0f5ff;font-weight:600;border-top:2px solid #c7d8f8;border-bottom:none;padding:8px}
-  tfoot td.num{text-align:right}
+  /* 合计行的数字居中 */
+  tfoot td.num{text-align:center}
   tfoot td.total-label{text-align:right;color:#1d4ed8}
 </style>
 </head>
@@ -64,9 +72,8 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
   <div class="card">
     <h1>粘贴表格文字 → 整理成产品清单 → 导出 Excel</h1>
     <div class="sub">
-      直接从网页表格里全选复制，粘贴到下面即可。支持 <b>制表符 / 多空格 / 竖线</b> 分隔；
-      自动识别表头，自动忽略「产品编号、描述、备注」等无关列；
-      <b>产品金额 = 产品数量 × 产品单价（自动计算，不取原始金额）</b>。
+      直接从网页表格里全选复制，粘贴到下面即可。自动识别表头，智能提取“名称、型号、单位、数量、含税单价、税率”；
+      <b>含税金额 = 数量 × 含税单价（自动计算）</b>。
     </div>
     <div style="margin-top:12px">
       <textarea id="input" placeholder="把网页表格复制粘贴到这里……"></textarea>
@@ -92,10 +99,11 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
           <tr>
             <th>#</th>
             <th>产品名称</th>
-            <th>产品型号</th>
-            <th>产品数量</th>
-            <th>产品单价</th>
-            <th>产品金额</th>
+            <th>规格型号</th>
+            <th>单位</th>
+            <th>数量</th>
+            <th>含税单价</th>
+            <th>含税金额</th>
             <th>税率</th>
             <th>操作</th>
           </tr>
@@ -104,7 +112,8 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
         <tfoot>
           <tr class="total-row">
             <td></td>
-            <td>合计</td>
+            <td class="total-label">合计</td>
+            <td></td>
             <td></td>
             <td class="num" id="totalQty">0</td>
             <td></td>
@@ -115,7 +124,7 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
         </tfoot>
       </table>
     </div>
-    <div class="tip">表格内容可直接修改；金额由「数量 × 单价」自动计算，不可手工编辑；合计行实时更新。</div>
+    <div class="tip">表格内容可直接修改；金额自动计算，不可手工编辑；合计行实时更新。</div>
   </div>
 
 </div>
@@ -124,10 +133,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
 <script>
 (function () {
   'use strict';
-
-  /* =========================================================
-     一、基础工具
-     ========================================================= */
 
   var $ = function (s) { return document.querySelector(s); };
 
@@ -139,7 +144,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
 
   function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 
-  /** 从任意文本中抽出数字，如 "¥1,500.00元" -> 1500 */
   function toNumber(v) {
     if (v === null || v === undefined) return null;
     var s = String(v).replace(/\u00a0/g, ' ').trim();
@@ -151,7 +155,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     return isNaN(n) ? null : n;
   }
 
-  /** 税率解析：13% -> 0.13 ；13 -> 0.13 ；0.13 -> 0.13 */
   function toTax(v, def) {
     if (v === null || v === undefined) return def;
     var s = String(v).trim();
@@ -177,13 +180,9 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     return (n === null || n === undefined || n === '') ? '' : String(n);
   }
 
-  /* =========================================================
-     二、把粘贴的文字切成「行 → 单元格」
-     ========================================================= */
-
+  // 切割单元格
   function splitCells(line) {
     var s = line.replace(/\u00a0/g, ' ');
-
     if (s.indexOf('\t') !== -1) {
       return s.split('\t').map(function (v) { return v.trim(); });
     }
@@ -210,15 +209,13 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     return rows;
   }
 
-  /* =========================================================
-     三、表头识别
-     ========================================================= */
-
+  // 表头映射，加入排除项
   var HEADER_MAP = [
     { field: 'tax',    keys: ['税率', '税点', 'tax'] },
-    { field: 'amount', keys: ['价税合计', '含税金额', '总金额', '金额', '总价', '合计', '小计', '总额', 'amount'] },
-    { field: 'price',  keys: ['单价', '价格', '售价', 'price', 'unitprice'] },
+    { field: 'amount', keys: ['价税合计', '含税金额', '总金额', '金额', '总价', '合计', '小计', '总额', 'amount'], exclude: ['无税', '不含税', '未税', '税额'] },
+    { field: 'price',  keys: ['含税单价', '含税价', '单价', '价格', '售价', 'price', 'unitprice'], exclude: ['无税', '不含税', '未税'] },
     { field: 'qty',    keys: ['数量', '件数', '个数', '数目', 'qty', 'quantity'] },
+    { field: 'unit',   keys: ['单位', '计量单位', 'unit'] },
     { field: 'model',  keys: ['规格型号', '型号', '规格', 'model', 'spec', '机种'] },
     { field: 'code',   keys: ['编号', '编码', '料号', '货号', 'code', 'sku', '序号', 'id'] },
     { field: 'name',   keys: ['产品名称', '商品名称', '物料名称', '货物名称', '品名', '名称', '产品', '商品', '物料', '货物', 'name', '项目'] },
@@ -228,8 +225,20 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
   function matchHeaderField(cell) {
     var c = String(cell).toLowerCase().replace(/[\s()（）\[\]【】:：*\/]/g, '');
     if (!c) return null;
+    
     for (var i = 0; i < HEADER_MAP.length; i++) {
       var item = HEADER_MAP[i];
+      var excluded = false;
+      if (item.exclude) {
+        for (var k = 0; k < item.exclude.length; k++) {
+          if (c.indexOf(item.exclude[k]) !== -1) {
+            excluded = true;
+            break;
+          }
+        }
+      }
+      if (excluded) continue;
+      
       for (var j = 0; j < item.keys.length; j++) {
         if (c.indexOf(item.keys[j]) !== -1) return item.field;
       }
@@ -250,28 +259,24 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     return null;
   }
 
-  /* =========================================================
-     四、生成一条记录
-     金额 = 数量 × 单价（自动计算，不再取原始金额列）
-     ========================================================= */
-
-  function buildRecord(nameRaw, modelRaw, qtyRaw, priceRaw, taxRaw, defaultTax) {
+  // 生成记录
+  function buildRecord(nameRaw, modelRaw, unitRaw, qtyRaw, priceRaw, taxRaw, defaultTax) {
     var name = clean(nameRaw);
     var model = clean(modelRaw);
+    var unit = clean(unitRaw);
     var qty = toNumber(qtyRaw);
     var price = toNumber(priceRaw);
 
-    // 数量、单价都没有 => 视为表头/无关行，丢弃
     if (qty === null && price === null) return null;
 
-    // 金额自动计算：数量 × 单价（二者缺一则金额为空）
+    // 含税金额自动计算
     var amount = (qty !== null && price !== null) ? round2(qty * price) : null;
-
     var tax = toTax(taxRaw, defaultTax);
 
     return {
       name: name,
       model: model,
+      unit: unit,
       qty: qty,
       price: price,
       amount: amount,
@@ -279,8 +284,20 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     };
   }
 
-  /** 没有表头时的兜底：文本列 → 名称/型号；数字列 → 数量/单价（忽略第三数字列） */
+  // 无表头时的智能提取
   function heuristicRecord(cells, defaultTax) {
+    // 优先匹配常见 ERP 单据结构（13列左右：名称,编号,型号,单位,数量,无税单价,含税单价,无税金额,税率,税额,含税金额,价税合计...）
+    if (cells.length >= 9) {
+      var qtyTest = toNumber(cells[4]);
+      var priceTest = toNumber(cells[6]);
+      if (qtyTest !== null && priceTest !== null) {
+        return buildRecord(
+          cells[0], cells[2], cells[3], qtyTest, priceTest, cells[8], defaultTax
+        );
+      }
+    }
+
+    // 通用兜底：文本列 → 名称/型号；数字列 → 数量/单价
     var nums = [], texts = [];
     for (var i = 0; i < cells.length; i++) {
       var s = String(cells[i]).trim();
@@ -293,6 +310,7 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     return buildRecord(
       texts[0] || '',
       texts[1] || '',
+      '',
       nums[0],
       nums.length > 1 ? nums[1] : null,
       '',
@@ -305,10 +323,7 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     return true;
   }
 
-  /* =========================================================
-     五、主解析流程
-     ========================================================= */
-
+  // 主解析流程
   function parseText(text, defaultTax) {
     var raw = toMatrix(text);
     if (!raw.length) return [];
@@ -331,7 +346,7 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
         var r = rows[i];
         if (isBlankRow(r)) continue;
         var get = function (f) { return map[f] !== undefined ? r[map[f]] : ''; };
-        var rec = buildRecord(get('name'), get('model'), get('qty'),
+        var rec = buildRecord(get('name'), get('model'), get('unit'), get('qty'),
                               get('price'), get('tax'), defaultTax);
         if (rec) out.push(rec);
       }
@@ -345,16 +360,12 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     return out;
   }
 
-  /* =========================================================
-     六、表格渲染 & 交互
-     ========================================================= */
-
   var records = [];
   var tbody = $('#result tbody');
 
   function renderTable() {
     if (!records.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无数据，请粘贴文字后点击「解析并生成表格」</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="9" class="empty">暂无数据，请粘贴文字后点击「解析并生成表格」</td></tr>';
       updateTotals();
       return;
     }
@@ -365,6 +376,7 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
         '<td class="idx">' + (i + 1) + '</td>' +
         '<td><input data-f="name" value="' + escapeAttr(r.name) + '"></td>' +
         '<td><input data-f="model" value="' + escapeAttr(r.model) + '"></td>' +
+        '<td><input data-f="unit" class="unit" value="' + escapeAttr(r.unit) + '"></td>' +
         '<td><input data-f="qty" class="num" value="' + escapeAttr(fmtNum(r.qty)) + '"></td>' +
         '<td><input data-f="price" class="num" value="' + escapeAttr(fmtNum(r.price)) + '"></td>' +
         '<td><input data-f="amount" class="num" value="' + escapeAttr(fmtNum(r.amount)) + '" readonly tabindex="-1"></td>' +
@@ -376,7 +388,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     updateTotals();
   }
 
-  /** 更新合计行与状态栏 */
   function updateTotals() {
     var totalQty = 0, totalAmount = 0;
     for (var i = 0; i < records.length; i++) {
@@ -390,7 +401,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     $('#status').textContent = '共 ' + records.length + ' 条　|　总金额：' + totalAmount.toFixed(2);
   }
 
-  // 编辑单元格
   tbody.addEventListener('input', function (e) {
     var inp = e.target;
     if (!inp.matches || !inp.matches('input[data-f]')) return;
@@ -404,7 +414,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
 
     if (f === 'qty' || f === 'price') {
       rec[f] = toNumber(inp.value);
-      // 金额 = 数量 × 单价，自动重算
       var v = (rec.qty !== null && rec.price !== null) ? round2(rec.qty * rec.price) : null;
       rec.amount = v;
       var amtInput = tr.querySelector('input[data-f="amount"]');
@@ -417,7 +426,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     }
   });
 
-  // 删除行
   tbody.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('.del') : null;
     if (!btn) return;
@@ -429,12 +437,9 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     }
   });
 
-  /* =========================================================
-     七、导出 Excel（含合计行）
-     ========================================================= */
-
+  // 构建导出数据（含单位列，重新计算合计）
   function buildAoa() {
-    var aoa = [['序号', '产品名称', '产品型号', '产品数量', '产品单价', '产品金额', '税率']];
+    var aoa = [['序号', '产品名称', '规格型号', '单位', '数量', '含税单价', '含税金额', '税率']];
     var totalQty = 0, totalAmount = 0;
 
     for (var i = 0; i < records.length; i++) {
@@ -444,6 +449,7 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
         i + 1,
         r.name || '',
         r.model || '',
+        r.unit || '',
         r.qty === null ? '' : r.qty,
         r.price === null ? '' : r.price,
         r.amount === null ? '' : r.amount,
@@ -453,12 +459,10 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
       if (typeof r.amount === 'number') totalAmount += r.amount;
     }
 
-    // 末尾合计行
     aoa.push([
-      '', '合计', '',
+      '', '合计', '', '',
       Math.round(totalQty * 1e6) / 1e6,
-      '',
-      round2(totalAmount),
+      '', round2(totalAmount),
       ''
     ]);
 
@@ -474,26 +478,25 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     if (!records.length) { alert('没有数据可以导出，请先解析表格。'); return; }
 
     var aoa = buildAoa();
-    var totalRowIndex = aoa.length - 1;
 
     if (typeof XLSX !== 'undefined' && XLSX.utils) {
       var ws = XLSX.utils.aoa_to_sheet(aoa);
       ws['!cols'] = [
-        { wch: 6 }, { wch: 26 }, { wch: 20 },
+        { wch: 6 }, { wch: 26 }, { wch: 20 }, { wch: 8 },
         { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 10 }
       ];
       var range = XLSX.utils.decode_range(ws['!ref']);
       for (var R = 1; R <= range.e.r; R++) {
-        setFormat(ws, R, 3, '0.##');       // 数量
-        setFormat(ws, R, 4, '#,##0.00');   // 单价
-        setFormat(ws, R, 5, '#,##0.00');   // 金额（含合计行）
-        setFormat(ws, R, 6, '0.##%');      // 税率
+        setFormat(ws, R, 4, '0.##');       // 数量
+        setFormat(ws, R, 5, '#,##0.00');   // 含税单价
+        setFormat(ws, R, 6, '#,##0.00');   // 含税金额（含合计行）
+        setFormat(ws, R, 7, '0.##%');      // 税率
       }
       var wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, '产品清单');
       XLSX.writeFile(wb, '产品清单.xlsx');
     } else {
-      exportAsXls(aoa);   // 离线兜底
+      exportAsXls(aoa);
     }
   }
 
@@ -517,10 +520,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  /* =========================================================
-     八、按钮绑定
-     ========================================================= */
-
   $('#parseBtn').addEventListener('click', function () {
     var text = $('#input').value;
     if (!text.trim()) { alert('请先把网页表格的内容粘贴到输入框中。'); return; }
@@ -534,7 +533,7 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
   $('#addRowBtn').addEventListener('click', function () {
     var defTax = toTax($('#defaultTax').value, 0.13);
     records.push({
-      name: '', model: '', qty: null, price: null, amount: null,
+      name: '', model: '', unit: '', qty: null, price: null, amount: null,
       taxText: String(defTax)
     });
     renderTable();
@@ -546,16 +545,11 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     renderTable();
   });
 
+  // 填充范例（就是你提供的这行数据）
   $('#sampleBtn').addEventListener('click', function () {
-    $('#input').value =
-      '产品编号\t产品名称\t规格型号\t数量\t单价\t金额\t税率\t备注\n' +
-      'A001\t深沟球轴承\t6204-2RS\t100\t12.5\t1250\t13%\t现货\n' +
-      'A002\t同步带\tHTD-5M-15\t20\t35\t700\t13%\t\n' +
-      'A003\t伺服电机\tMSMF042L1U2M\t2\t3650\t7300\t13%\t含税\n' +
-      'A004\t联轴器\tLK13-508\t6\t268\t1608\t13%\t加急';
+    $('#input').value = '洛阳信京中央实验台\t040351\tXJ-SYT-063\t台\t1.00\t5,530.97345132743\t6,250\t5,530.97\t13.00%\t719.03\t6,250.00\t6,250.00\t尺寸：3000*1500*800（mm）；台面：12.7mm厚实芯理化板；';
   });
 
-  // Ctrl + Enter 快速解析
   $('#input').addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
@@ -563,7 +557,6 @@ th:nth-child(4), th:nth-child(5), th:nth-child(6), th:nth-child(7) {
     }
   });
 
-  /* 初始化 */
   renderTable();
 
 })();
